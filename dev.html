@@ -109,9 +109,11 @@ function show_content(id) {
   fetch("/" + id + ".html")
     .then(response => {
       if(!response.ok) {
-        document.getElementById('content').innerHTML = "<pre>" + response.status + ": " + response.statusText + "</pre>";
+        return "<div class='section-body'><pre>" + response.status + ": " + response.statusText + "</pre></div><div class='section-title'>Error</div>";
       }
-      return response.text();
+      else {
+        return response.text();
+      }
     })
     .then(data => {
       var tempElement = document.createElement('div');
