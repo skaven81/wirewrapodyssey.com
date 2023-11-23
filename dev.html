@@ -22,39 +22,61 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
 <body>
 
 <nav class="w3-sidebar w3-bar-block w3-collapse w3-animate-left w3-card" style="z-index:3;width:250px;" id="mySidebar">
-  <a class="w3-bar-item w3-button w3-border-bottom w3-large" href="#"><img src="https://www.w3schools.com/images/w3schools.png" style="width:80%;"></a>
+  <a class="w3-bar-item w3-button w3-border-bottom w3-large" href="javascript:show_content('home', 'Wire Wrap Odyssey')">Wire Wrap Odyssey</a>
   <a class="w3-bar-item w3-button w3-hide-large w3-large" href="javascript:void(0)" onclick="w3_close()">Close <i class="fa fa-remove"></i></a>
-  <a class="w3-bar-item w3-button w3-blue" href="javascript:show_content('home')">Home</a>
-  <a class="w3-bar-item w3-button" href="javascript:show_content('link1')">Link 1</a>
-  <a class="w3-bar-item w3-button" href="#">Link 2</a>
-  <a class="w3-bar-item w3-button" href="#">Link 3</a>
-  <a class="w3-bar-item w3-button" href="#">Link 4</a>
-  <a class="w3-bar-item w3-button" href="#">Link 5</a>
-  <div>
-  <a class="w3-bar-item w3-button" onclick="myAccordion('demo')" href="javascript:void(0)">Dropdown <i class="fa fa-caret-down"></i></a>
-  <div id="demo" class="w3-hide">
-    <a class="w3-bar-item w3-button" href="#">Link</a>
-    <a class="w3-bar-item w3-button" href="#">Link</a>
-    <a class="w3-bar-item w3-button" href="#">Link</a>
+  <a class="w3-bar-item w3-button" href="javascript:show_content('home', 'Wire Wrap Odyssey')">Home</a>
+  <a class="w3-bar-item w3-button" href="javascript:show_content('overview', 'Overview')">Overview</a>
+  <a class="w3-bar-item w3-button" onclick="accordion('architecture-accordion')" href="javascript:void(0)"><i class="fa fa-caret-right" style="margin-right:5px;"></i>Architecture</a>
+  <div id="architecture-accordion" class="w3-hide accordion">
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-overview', 'Architecture Overview')">Architecture Overview</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-clock-reset', 'Clock and Reset Generation')">Clock and Reset Generation</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-pc', 'Program Counter')">Program Counter</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-bus', 'ROM, RAM & System Bus')">ROM, RAM & System Bus</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-lights', 'Blinkenlights')">Blinkenlights</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-instruction', 'Instruction Decoding')">Instruction Decoding</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-transfer', 'Transfer Registers')">Transfer Registers</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-stack', 'Stack Pointer')">Stack Pointer</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-alu', 'Arithmetic Logic Unit')">Arithmetic Logic Unit</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-const', 'Constant Registers')">Constant Registers</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-irq', 'Interrupt Handler')">Interrupt Handler</a>
   </div>
+  <a class="w3-bar-item w3-button" onclick="accordion('peripherals-accordion')" href="javascript:void(0)"><i class="fa fa-caret-right" style="margin-right:5px;"></i>Peripherals</a>
+  <div id="peripherals-accordion" class="w3-hide accordion">
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-kb', 'PS/2 Keyboard')">PS/2 Keyboard</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-timer', 'RTC & Timer')">RTC & Timer</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-serial', 'RS232 UART')">RS232 UART</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-extram', '1MB Extended RAM')">1MB Extended RAM</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-ata', 'ATA Port')">ATA Port</a>
   </div>
+  <a class="w3-bar-item w3-button" onclick="accordion('video-accordion')" href="javascript:void(0)"><i class="fa fa-caret-right" style="margin-right:5px;"></i>Video Card</a>
+  <div id="video-accordion" class="w3-hide accordion">
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('video-overview', 'Video Card Overview')">Overview</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('video-hsync-vsync', 'Hsync & Vsync Generation')">Hsync & Vsync Generation</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('video-char', 'Character Generation')">Character Generation</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('video-color', 'Color Generation')">Color Generation</a>
+  </div>
+  <a class="w3-bar-item w3-button" onclick="accordion('software-accordion')" href="javascript:void(0)"><i class="fa fa-caret-right" style="margin-right:5px;"></i>Software</a>
+  <div id="software-accordion" class="w3-hide accordion">
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('sw-assembler', 'Assembler')">Assembler</a>
+    <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('sw-library', 'OS Library')">OS Library</a>
+  </div>
+  <a class="w3-bar-item w3-button" href="javascript:show_content('history', 'History')">History</a>
 </nav>
 
 <div class="w3-overlay w3-hide-large w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" id="myOverlay"></div>
 
 <div class="w3-main" style="margin-left:250px;">
 
-  <div id="myTop" class="w3-container w3-top w3-theme w3-large">
-    <p><i class="fa fa-bars w3-button w3-blue w3-hide-large w3-xlarge" onclick="w3_open()"></i>
-    <span id="myIntro" class="w3-hide">W3.CSS: Introduction</span></p>
+  <div class="w3-container w3-top w3-theme w3-large">
+    <p class="top-header">
+      <i class="fa fa-bars w3-button w3-blue w3-hide-large w3-xlarge" onclick="w3_open()"></i>
+      <span id="section-header" class="w3-strong w3-large">Wire Wrap Odyssey</span>
+    </p>
   </div>
 
-  <header class="w3-container w3-theme" style="padding:64px 32px">
-    <h1 class="w3-xxxlarge">Wire Wrap Odyssey</h1>
-  </header>
+  <div class="w3-container" style="padding:64px 32px 16px 32px">
 
-  <div class="w3-container" style="padding:32px">
-
+    <!-- Home -->
     <div id="home" class="content" style="display: block;">
       <h2>What is Wire Wrap Odyssey?</h2>
 
@@ -67,14 +89,8 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
       cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
       est laborum
       </p>
-    </div>
-
-    <div id="link1" class="content" style="display: none;">
-      <h2>Link 1 content</h2>
 
       <p>
-      FOO BAR BAZ
-
       Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
       tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
       veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
@@ -83,6 +99,138 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
       cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
       est laborum
       </p>
+
+      <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+      velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+      cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
+      est laborum
+      </p>
+
+      <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+      velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+      cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
+      est laborum
+      </p>
+
+      <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+      velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+      cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
+      est laborum
+      </p>
+
+      <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+      velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+      cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
+      est laborum
+      </p>
+
+      <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+      velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+      cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
+      est laborum
+      </p>
+
+      <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+      velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+      cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
+      est laborum
+      </p>
+    </div>
+
+    <div id="overview" class="content" style="display: none;">
+    </div>
+
+    <div id='arch-overview' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-clock-reset' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-pc' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-bus' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-lights' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-instruction' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-transfer' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-stack' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-alu' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-const' class="content" style="display: none;">
+    </div>
+
+    <div id='arch-irq' class="content" style="display: none;">
+    </div>
+
+    <div id='perhiph-kb' class="content" style="display: none;">
+    </div>
+
+    <div id='perhiph-timer' class="content" style="display: none;">
+    </div>
+
+    <div id='perhiph-serial' class="content" style="display: none;">
+    </div>
+
+    <div id='perhiph-extram' class="content" style="display: none;">
+    </div>
+
+    <div id='perhiph-ata' class="content" style="display: none;">
+    </div>
+
+    <div id='video-overview' class="content" style="display: none;">
+    </div>
+
+    <div id='video-hsync-vsync' class="content" style="display: none;">
+    </div>
+
+    <div id='video-char' class="content" style="display: none;">
+    </div>
+
+    <div id='video-color' class="content" style="display: none;">
+    </div>
+
+    <div id='sw-assembler' class="content" style="display: none;">
+    </div>
+
+    <div id='sw-library' class="content" style="display: none;">
+    </div>
+
+    <div id='history' class="content" style="display: none;">
     </div>
 
     <!--
@@ -147,7 +295,7 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
 
   </div>
 
-  <footer class="w3-container w3-theme" style="padding:32px">
+  <footer class="w3-container w3-theme" style="padding:16px">
     <p>Footer information goes here</p>
   </footer>
    
@@ -166,7 +314,7 @@ function w3_close() {
 }
 
 // Show the different sections
-function show_content(id) {
+function show_content(id, heading) {
   document.querySelectorAll('.content').forEach(function(element) {
     if(element.id === id) {
       element.style.display = 'block';
@@ -175,30 +323,16 @@ function show_content(id) {
       element.style.display = 'none';
     }
   });
-}
-
-// Change style of top container on scroll
-window.onscroll = function() {myFunction()};
-function myFunction() {
-  if (document.body.scrollTop > 80 || document.documentElement.scrollTop > 80) {
-  document.getElementById("myTop").classList.add("w3-card-4", "w3-animate-opacity");
-  document.getElementById("myIntro").classList.add("w3-show-inline-block");
-  } else {
-  document.getElementById("myIntro").classList.remove("w3-show-inline-block");
-  document.getElementById("myTop").classList.remove("w3-card-4", "w3-animate-opacity");
-  }
+  document.getElementById('section-header').innerHTML = heading;
 }
 
 // Accordions
-function myAccordion(id) {
+function accordion(id) {
   var x = document.getElementById(id);
   if (x.className.indexOf("w3-show") == -1) {
-  x.className += " w3-show";
-  x.previousElementSibling.className += " w3-theme";
+    x.className += " w3-show";
   } else { 
-  x.className = x.className.replace("w3-show", "");
-  x.previousElementSibling.className = 
-  x.previousElementSibling.className.replace(" w3-theme", "");
+    x.className = x.className.replace("w3-show", "");
   }
 }
 </script>
