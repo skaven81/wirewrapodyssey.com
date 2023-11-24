@@ -26,7 +26,7 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
   <a class="w3-bar-item w3-button w3-hide-large w3-large" href="javascript:void(0)" onclick="w3_close()">Close <i class="fa fa-remove"></i></a>
   <a class="w3-bar-item w3-button" href="javascript:show_content('home')">Home</a>
   <a class="w3-bar-item w3-button" href="javascript:show_content('overview')">Overview</a>
-  <a class="w3-bar-item w3-button" onclick="accordion('architecture-accordion')" href="javascript:void(0)"><i class="fa fa-caret-right" style="margin-right:5px;"></i>Architecture</a>
+  <a class="w3-bar-item w3-button" onclick="accordion('architecture-accordion')" href="javascript:void(0)"><i id="architecture-accordion-caret" class="fa fa-caret-right" style="margin-right:5px;"></i>Architecture</a>
   <div id="architecture-accordion" class="w3-hide accordion">
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-overview')">Architecture Overview</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-clock-reset')">Clock and Reset Generation</a>
@@ -40,7 +40,7 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-const')">Constant Registers</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-irq')">Interrupt Handler</a>
   </div>
-  <a class="w3-bar-item w3-button" onclick="accordion('peripherals-accordion')" href="javascript:void(0)"><i class="fa fa-caret-right" style="margin-right:5px;"></i>Peripherals</a>
+  <a class="w3-bar-item w3-button" onclick="accordion('peripherals-accordion')" href="javascript:void(0)"><i id="peripherals-accordion-caret" class="fa fa-caret-right" style="margin-right:5px;"></i>Peripherals</a>
   <div id="peripherals-accordion" class="w3-hide accordion">
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-kb')">PS/2 Keyboard</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-timer')">RTC & Timer</a>
@@ -48,14 +48,14 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-extram')">1MB Extended RAM</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('perhiph-ata')">ATA Port</a>
   </div>
-  <a class="w3-bar-item w3-button" onclick="accordion('video-accordion')" href="javascript:void(0)"><i class="fa fa-caret-right" style="margin-right:5px;"></i>Video Card</a>
+  <a class="w3-bar-item w3-button" onclick="accordion('video-accordion')" href="javascript:void(0)"><i id="video-accordion-caret" class="fa fa-caret-right" style="margin-right:5px;"></i>Video Card</a>
   <div id="video-accordion" class="w3-hide accordion">
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('video-overview')">Overview</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('video-hsync-vsync')">Hsync & Vsync Generation</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('video-char')">Character Generation</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('video-color')">Color Generation</a>
   </div>
-  <a class="w3-bar-item w3-button" onclick="accordion('software-accordion')" href="javascript:void(0)"><i class="fa fa-caret-right" style="margin-right:5px;"></i>Software</a>
+  <a class="w3-bar-item w3-button" onclick="accordion('software-accordion')" href="javascript:void(0)"><i id="software-accordion-caret" class="fa fa-caret-right" style="margin-right:5px;"></i>Software</a>
   <div id="software-accordion" class="w3-hide accordion">
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('sw-assembler')">Assembler</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('sw-library')">OS Library</a>
@@ -129,10 +129,13 @@ function show_content(id) {
 // Accordions
 function accordion(id) {
   var x = document.getElementById(id);
+  var y = document.getElementById(id + "-caret");
   if (x.className.indexOf("w3-show") == -1) {
     x.className += " w3-show";
+    y.className = y.className.replace("fa-caret-right", "fa-caret-down");
   } else { 
     x.className = x.className.replace("w3-show", "");
+    y.className = y.className.replace("fa-caret-down", "fa-caret-right");
   }
 }
 </script>
