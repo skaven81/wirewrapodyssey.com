@@ -7,6 +7,7 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
 <head>
   <title>Wire Wrap Odyssey</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="/dev.html">
   <link rel="stylesheet" href="/css/w3.css">
   <link rel="stylesheet" href="/css/w3-theme-blue.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
@@ -87,7 +88,31 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
 <script>
 // Load the home page document on initial load
 document.addEventListener('DOMContentLoaded', function() {
-  show_content('home');
+  const state = event.state;
+  const initialPageId = window.location.hash.substring(1);
+  if (state && state.id) {
+    show_content(state.id);
+  }
+  else if (initialPageId) {
+    show_content(initialPageId);
+  }
+  else {
+    show_content('home');
+  }
+});
+
+// If the user changes the hash, update accordingly
+window.addEventListener('hashchange', function () {
+  var newHash = window.location.hash.substring(1);
+  show_content(newHash);
+});
+
+// Handle forward/back navigation
+window.addEventListener('popstate', function (event) {
+  const state = event.state;
+  if (state && state.id) {
+    show_content(state.id);
+  }
 });
 
 // Open and close the sidebar on medium and small screens
@@ -106,6 +131,7 @@ function w3_close() {
 // is injected into the `content` div above.  The element inside with class
 // `section-title` is injected into the `section-header` span above.
 function show_content(id) {
+  history.pushState({ id: id }, null, `#${id}`);
   fetch("/" + id + ".html")
     .then(response => {
       if(!response.ok) {
