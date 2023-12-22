@@ -237,3 +237,21 @@ hr{border:0;border-top:1px solid #eee;margin:20px 0}
 .accordion{margin-left:15px;}
 .w3-strong{font-weight:bolder}
 .top-header{margin-bottom:10px; margin-top:10px; display:flex; align-items:center;}
+
+.section-body{max-width:100%;}
+.register { 
+    display: inline-block; /* Make the container an inline block */
+    background-color: #f0f0f0; /* Set the background color to gray */
+    color: #000; /* Set text color to black */
+    padding: 2px 4px; /* Add padding for spacing inside the container */
+    border: 1px solid #000; /* Add a black border */
+    border-radius: 6px; /* Add rounded corners */
+    font-family: 'Courier New', monospace; /* Set a monospaced font */
+    font-weight: bold; /* Make the text bold */
+    height: 1.6em;
+}
+
+.figure-container {border:1px solid #ccc; padding:10px; margin:0;}
+.figure-container img {max-width:100%; height:auto; display:block;}
+.figure-caption {font-style:italic; color:#666; margin-top:8px;}
+

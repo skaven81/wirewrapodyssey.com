@@ -1,0 +1,227 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Architecture Overview
+  </div>
+  <div class='section-body'>
+    <h2>Architecture Overview</h2>
+
+    <p>
+    The Wire Wrap Odyssey is an 8-bit microcoded CPU with a 16-bit address bus.
+    It is built primarily from 7400-series logic (mostly <tt>HC</tt> series).
+    The diagram below shows the major components of the CPU and its peripherals.
+    Arrows indicate data flow direction.  For example, the 8-bit <tt class=register>TD</tt> register
+    can be presented to the data bus, and can read from the data bus, but it has
+    no connection to the address bus.  The 16-bit <tt class=register>C</tt> register
+    (composed of the 8-bit <tt class=register>CH</tt> and <tt class=register>CL</tt>
+    registers), can put its value on the address bus, as well as the data bus. The
+    <tt class=register>CH</tt> and <tt class=register>CL</tt> registers can be set
+    from the data bus as well.  The <tt>+</tt> and <tt>-</tt> marks indicate that this
+    register is composed of counters, so the value of the register can be incremented
+    or decremented without involving the ALU.
+    </p>
+
+    <p>
+    A brief description of each component is given below the diagram.  Use the links
+    in the navbar for detailed descriptions of each component.
+    </p>
+
+    <figure class='figure-container'>
+      <a href="img/CPU Block Diagram.drawio.svg" target=_blank><img src="img/CPU Block Diagram.drawio.svg"></a>
+      <figcaption class='figure-caption'>Block diagram of the Wire Wrap Odyssey CPU and peripherals. Click to open fullsize in a new tab.</figcaption>
+    </figure>
+
+    <h3>Address and Data Bus</h3>
+    <p>
+    The address and data buses are passive, with 330 ohm pullup resistors.  The low
+    value for the pullup resistors is to enable higher clock speeds (at the expense
+    of more power consumption).  With 330 ohm resistors and <tt>HC</tt> logic, the
+    Wire Wrap Odyssey CPU can run stably at around 2.5MHz.
+    </p>
+
+    <h3>ROM</h3>
+    <p>
+    The ROM is an <tt>AT28C256</tt> 32KiB EEPROM. Only the first 16KiB of the EERPOM
+    is used, and a DIP switch allows selecting between the lower and upper 16KiB.
+    The ROM control logic pulls its <tt>/OE</tt> low when the first two bits of the
+    address are <tt>0b00</tt>.
+    </p>
+
+    <h3>RAM</h3>
+    <p>
+    The primary RAM is a Renesas 7007 32KiB dual-port static RAM. This is a marked
+    departure from the rest of the CPU which uses mostly parts from the '70s and '80s.
+    But the advantages in performance and ease of design were too much to pass up.
+    The dual-port RAM allows the video card to constantly read, and for the CPU to
+    write, without the two having to coordinate with each other.
+    </p>
+    <p>
+    The first 8KiB of the RAM's address space is reserved for the video card, and
+    the last 4KiB is reserved for system functions like the stack, heap, and buffers
+    for the UART and keyboard.  The remaining 20KiB is available for application
+    use. The Odyssey OS includes a primitive but functional <tt>malloc</tt> implementation
+    that allows for RAM to be allocated dynamically from this 20KiB range.  Larger
+    data sets can be manipulated using the 1MiB extended RAM peripheral, which is
+    visible through a pair of configurable 4KiB windows.
+    </p>
+
+    <h3>Program Counter</h3>
+    <p>
+    The program counter <tt class=register>PC</tt> is built up from four <tt>74x161</tt>
+    four-bit synchronous counters. Data can be loaded into <tt class=register>PCL</tt>
+    and <tt class=register>PCH</tt> from the data bus (used for jump instructions) and
+    can be incremented (16-bits wide) without needing the ALU.
+    </p>
+
+    <h3>Tranfer Registers</h3>
+    <p>
+    The <tt class=register>TAH</tt>, <tt class=register>TAL</tt>, and <tt class=register>TD</tt>
+    registers are used within microcoded instructions to move data around, without
+    interfering with program data. Some instructions do allow direct manipulation of these
+    registers, but such instructions must be used carefully, as the data stored in these
+    registers can be wiped out by executing an instruction that uses them.
+    </p>
+
+    <h3>Arithmetic Logic Unit</h3>
+    <p>
+    The ALU is a custom design based around a lookup table.  Two <tt>AT28C256</tt> EEPROMs
+    are flashed in such a way that each behaves as a 4-bit ALU.  The two ALUs are combined
+    to create an 8-bit sliced ALU.  Only the <tt class=register>A</tt> and <tt class=register>B</tt>
+    registers can route data through the ALU.  The ALU can only write to the data bus.
+    The <tt class=register>A</tt> and <tt class=register>B</tt> registers cannot write to
+    the data bus directly; an ALU operation must route their data to the bus.  However, these
+    registers can be presented to the address bus without an ALU operation.
+    </p>
+    <p>
+    The ALU supports 32 instructions, including basic arithmetic, logic, and shifting
+    operations.  There are also some special instructions for setting and clearing specific
+    bits that make manipulating the video display easier. Since the ALU is just a pair of
+    EEPROMs, instructions can be added or removed in the future as needed.
+    </p>
+    <p>
+    Every ALU operation writes three status flags to a status register: <tt>Z</tt> (result
+    of last operation was zero), <tt>E</tt> (the two operands were equal), and <tt>O</tt>
+    (the result of the last operation set the carry-out bit, e.g. overflow).
+    </p>
+
+    <h3>C and D Registers</h3>
+    <p>
+    The 16-bit <tt class=register>C</tt> and <tt class=register>D</tt> registers (each comprised
+    of 8-bit high and low registers) are built up from <tt>74x191</tt> up-down counters.
+    This allows their value to be loaded from the data bus, and then once set, be incremented
+    or decremented (across the full 16-bit value) without involving the ALU.  This helps to
+    optimize operations where data is being examined or copied between two regions of memory,
+    as the "to" and "from" addresses can live in <tt class=register>C</tt> and <tt class=register>D</tt>,
+    and the program can easily move through series of addresses without having to shuffle
+    registers around to involve the ALU. They also serve as overflow storage when the four
+    ALU registers are insufficient.
+    </p>
+
+    <h3>Instruction Sequencing</h3>
+    <p>
+    Instructions are represented as anonymous 8-bit values.  Thus there are 256
+    possible opcodes.  None of the opcode bits are used directly to influence
+    the control logic.  Instead, the opcode is concatenated with the ALU
+    <tt class=register>FLAGS</tt> and a 4-bit <tt class=register>SEQUENCE</tt>
+    counter, to create a 15-bit value.  This value is fed to the address pins
+    of four <tt>AT28C256</tt> EEPROMs, which then emit 32 control signals.
+    Software is used to compile the four control ROM images.  The result is a
+    Turing-machine-like state machine, where the next state (and thus the next
+    value presented to the control ROM address inputs) is derived from the
+    current state.  The sequence counter always increments by one every clock
+    tick.  A control signal can reset the sequence counter to zero, which
+    terminates the current instruction. It is nearly always paired with control
+    signals to write the next opcode into the <tt class=register>OPCODE</tt>
+    register.
+    </p>
+
+    <h3>Interrupt Handling</h3>
+    <p>
+    Peripherals can pull one of eight interrupt lines low (they are all held
+    high with pull-up resistors).  The interrupt lines go into a <tt>74x148</tt>
+    priority encoder.  When any interrupt line is pulled low, the IRQ Pending
+    signal will be asserted.  If this signal is asserted, and interrupts are
+    enabled (not masked), then the next time the <tt class=register>OPCODE</tt>
+    register is written, instead of the value coming from the data bus being used,
+    the static value <tt>0xEE</tt> is written instead.  The actual interrupt
+    handling is then performed by microcode.
+    </p>
+    <p>
+    The <tt>IRQ</tt> opcode masks interrupts and saves the current value of the <tt class=register>PC</tt>
+    and <tt class=register>D</tt> to the stack, writes <tt class=register>IRQVEC</tt>
+    (<tt>0x5f</tt>) to <tt class=register>DH</tt>, and <tt class=register>IRQID</tt>
+    (the 3-bit IRQ number, shifted left one bit) to <tt class=regiser>DL</tt>.
+    <tt class=register>D</tt> is presented to the address bus, and the resulting
+    byte on the data bus is written to <tt class=register>PCH</tt>.  Then <tt class=register>D</tt>
+    is incremented, and the operation is done again, with the new byte written
+    to the <tt class=register>PCL</tt> register.  <tt class=register>D</tt> is restored
+    from the stack, and the opcode at <tt class=register>PC</tt> is loaded into
+    <tt class=register>OPCODE</tt>, and operation continues.
+    </p>
+    <p>
+    The <tt>RETI</tt> instruction reverses this operation, restoring <tt class=register>PC</tt>
+    from the stack, loading <tt class=register>OPCODE</tt> from the address in
+    <tt class=register>PC</tt>, unmasking interrupts, and resuming operation.
+    </p>
+    <p>
+    By microcoding the interrupt handler, it makes programming custom interrupt
+    handlers easy.  The software just needs to write an interrupt vector address
+    to <tt>0x5fnn</tt>. When that interrupt is triggered, the CPU will jump
+    directly to that address, with interrupts masked, and begin executing. The
+    interrupt handler is responsible for servicing the peripheral (such that it
+    stops asserting its interrupt line) then terminates with a <tt>RETI</tt>
+    instruction and control is seamlessly returned to the main program.
+    </p>
+
+    <h3>Video Card</h3>
+    <p>
+    The video card is attached to the "left" side of the 32KiB dual-port RAM (the CPU
+    uses the "right" side).  The video card outputs a VGA 640x480 video signal and displays
+    a 64x60 grid of 8x8 pixel characters.  There is no support for direct graphics, it
+    is only a character display.
+    </p>
+    <p>
+    The video card maps the top 4KiB (minus 256 bytes) to the characters in the 64x60 grid.
+    Character glyphs use the classic DOS codepage 437 character set, and are pulled directly
+    from the archives at <a href="https://int10h.org">int10h</a>. DIP switches on the video
+    card allow for selection from 16 fonts, and can be selected with the computer online
+    and running.
+    </p>
+    <p>
+    The second 4KiB of the dual-port RAM (minus 256 bytes) is used for storing color data.
+    Six-bit color is used, with two bits each for red, green, and blue intensity, for a total
+    of 64 available colors.  The remaining two bits are for making that character blink, or
+    have a blinking cursor drawn on it. This has the unusual side effect that multiple cursors
+    (or cursors wider than one character) may be drawn.
+    </p>
+
+    <h3>Peripherals</h3>
+    <p>
+    Peripherals are handled through memory mapping and interrupts.  Peripherals may
+    only interact with the address bus (read), the data bus (read and write) and
+    the <tt>/WRAM</tt> (write RAM), <tt>CLK</tt>, <tt>/CLK</tt>, and <tt>RST</tt>
+    control signals.
+    </p>
+    <p>
+    Typical operation of an Odyssey peripheral is to "listen" to some address(es)
+    in the <tt>0xcnnn</tt> address space. Reading or writing these addresses will
+    usually read or write a register in the peripheral, and is often the trigger
+    to make the peripheral stop asserting its interrupt line.  Data can be read from
+    and written to the peripheral by reading and writing to specific memory addresses.
+    </p>
+    <p>
+    Currently the Odyssey has four peripherals:
+    <ul>
+    <li>PS/2 Keyboard controller</li>
+    <li><tt>DS1511Y+</tt> Real Time Clock and timer (also contains a 256 byte battery-backed static RAM)
+    <li><tt>82C52</tt> UART
+    <li>1MB extended RAM</li>
+    </ul>
+    Additional peripherals are planned, such as an ATA port and a parallel port.
+    </p>
+  </div>
+</body>
+</html>
