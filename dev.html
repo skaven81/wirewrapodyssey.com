@@ -151,6 +151,12 @@ function show_content(id) {
     .catch(error => {
       console.error("Error in fetch operation:", error);
     })
+
+  // scroll to the top of the page
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
 }
 
 // Accordions
