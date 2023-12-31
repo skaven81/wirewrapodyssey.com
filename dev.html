@@ -23,10 +23,10 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
 <body>
 
 <nav class="w3-sidebar w3-bar-block w3-collapse w3-animate-left w3-card" style="z-index:3;width:250px;" id="mySidebar">
-  <a class="w3-bar-item w3-button w3-border-bottom w3-large" href="javascript:show_content('home')">Wire Wrap Odyssey</a>
+  <a class="w3-bar-item w3-button w3-border-bottom w3-large" href="javascript:show_content('overview')">Wire Wrap Odyssey</a>
   <a class="w3-bar-item w3-button w3-hide-large w3-large" href="javascript:void(0)" onclick="w3_close()">Close <i class="fa fa-remove"></i></a>
-  <a class="w3-bar-item w3-button" href="javascript:show_content('home')">Home</a>
   <a class="w3-bar-item w3-button" href="javascript:show_content('overview')">Overview</a>
+  <a class="w3-bar-item w3-button" href="javascript:show_content('history')">History</a>
   <a class="w3-bar-item w3-button" onclick="accordion('architecture-accordion')" href="javascript:void(0)"><i id="architecture-accordion-caret" class="fa fa-caret-right" style="margin-right:5px;"></i>Architecture</a>
   <div id="architecture-accordion" class="w3-hide accordion">
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('arch-overview')">Architecture Overview</a>
@@ -61,7 +61,8 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('sw-assembler')">Assembler</a>
     <a class="w3-bar-item w3-button w3-small" href="javascript:show_content('sw-library')">OS Library</a>
   </div>
-  <a class="w3-bar-item w3-button" href="javascript:show_content('history')">History</a>
+  <a class="w3-bar-item w3-button" href="javascript:show_content('photos')">Photos</a>
+  <a class="w3-bar-item w3-button" href="javascript:show_content('documentation')">Documentation</a>
 </nav>
 
 <div class="w3-overlay w3-hide-large w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" id="myOverlay"></div>
@@ -97,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
     show_content(initialPageId);
   }
   else {
-    show_content('home');
+    show_content('overview');
   }
 });
 

@@ -1,0 +1,113 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Wire Wrap Odyssey
+  </div>
+  <div class='section-body'>
+    <h2>What is the Wire Wrap Odyssey?</h2>
+
+    <figure class='figure-container'>
+      <a href="photo/desktop.jpg" target=_blank><img src="photo/desktop_web.jpg"></a>
+      <figcaption class='figure-caption'>The Wire Wrap Odyssey homebrew computer in action. Click to open fullsize in a new tab.</figcaption>
+    </figure>
+
+    <p>
+    The Wire Wrap Odyssey is a custom 8-bit microcoded CPU with a 16-bit address bus.
+    It is built primarily from 7400-series logic (mostly <tt>HC</tt> series). There are
+    no VLSI components in the core system at all, nearly everything is built around
+    simple logic components such as <tt>74x377</tt> D flip flops, <tt>74x245</tt> bus
+    transceivers, multiplexers, selectors, and a generous pile of simple logic gates.
+    </p>
+
+    <h3>But why?</h3>
+
+    <p>
+    As part of my computer science curriculum at Texas A&amp;M University from 2000-2005,
+    I took a computer architecture course where I learned how computers work at the
+    fundamental level.  The textbook for the course, <i>Computer Organization and
+    Design: The Hardware/Software Interface</i> by David Patterson and John Hennessy,
+    walked us through designing a 32-bit MIPS CPU, culminating in an actual working 
+    (virtual) CPU designed in Verilog.
+    </p>
+
+    <p>
+    Something about this course during my studies stuck with me, as I started to better
+    understand how the early microcomputers such as the Apple I and Apple ][, Commodore
+    64, TRS-80, and even early x86 systems like the PC-XT with Intel's 8088 and 80286,
+    were designed.  These early computers were sufficiently simple that the entire
+    architecture could be understood by a single person.
+    </p>
+
+    <p>
+    I also discovered the Homebuilt Computers Webring, which introduced me to dozens
+    of ambitious projects being undertaken by mere mortals like myself, to build
+    homemade computers.  For example, the
+    <a href="http://www.homebrewcpu.com/" target=_blank>Magic-1</a> and the
+    <a href="https://www.bigmessowires.com/bmow1/" target=_blank>BMOW-1</a>.
+    </p>
+
+    <p>
+    So in 2010, I began working on my own homebuilt computer.  The Wire Wrap Odyssey
+    is the result.  Over a decade in the making (but realistically starting in earnest
+    in 2019 after finally settling on wire wrap as the best way to construct the system),
+    the Wire Wrap Odyssey has been a long LONG journey of dead ends, failed designs,
+    questionable implementations, and tricky troubleshooting.
+    </p>
+
+    <h3>What you will find here</h3>
+
+    <p>
+    This website documents all of what went into making the Wire Wrap Odyssey work,
+    including the parts I did wrong, the parts I think I did right, and all the
+    documentation I've collected along the way.
+    </p>
+
+    <p>
+    All of my schematics and design notes are on paper, so I've scanned in these pages
+    for you to peruse (see the <a href="javascript:show_content('documentation')">Documentation</a> section).
+    However, I do not recommend that you attempt to replicate my work.  There are far
+    better designs out there if you are interested in tackling a project like this.
+    </p>
+
+    <h3>Site Contents</h3>
+
+    <p>
+    <b>Overview</b> - this page
+    </p>
+
+    <p>
+    <b>Architecture</b> - how the Wire Wrap Odyssey works, top to bottom.  Includes
+    callouts about where I made (in my opinion) bad architectural decisions, to help
+    ward off others from making the same mistakes.
+    </p>
+
+    <p>
+    <b>Peripherals</b> - as I continue adding capabilities to the Wire Wrap Odyssey
+    computer, I'll add pages here describing the new peripherals.
+    </p>
+
+    <p>
+    <b>Video Card</b> - the video card peripheral is sufficiently complex that it warrants
+    its own section.  It's also inextricably linked to the CPU itself, unlike other
+    peripherals like the real time clock or UART.
+    </p>
+
+    <p>
+    <b>Software</b> - notes about the helper software I wrote to do things like program
+    the control ROMs, the ALU, and assemble machine code.
+    </p>
+
+    <p>
+    <b>Photos</b> - pictures of the Wire Wrap Odyssey, at various stages of completion.
+    </p>
+
+    <p>
+    <b>Documentation</b> - scans of paper notes, links to source code.
+    </p>
+
+  </div>
+</body>
+</html>
