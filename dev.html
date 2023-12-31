@@ -19,6 +19,7 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
       font-weight: bold;
     }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body>
 
@@ -134,6 +135,12 @@ function w3_close() {
 // is injected into the `content` div above.  The element inside with class
 // `section-title` is injected into the `section-header` span above.
 function show_content(id) {
+  var validIdRegex = /^[a-z-]+$/;
+  if (!validIdRegex.test(id) || id.length > 20) {
+    console.log("ID " + id + " is invalid");
+    return;
+  }
+
   history.pushState({ id: id }, null, `#${id}`);
   fetch("/" + id + ".html")
     .then(response => {
@@ -147,8 +154,8 @@ function show_content(id) {
     .then(data => {
       var tempElement = document.createElement('div');
       tempElement.innerHTML = data;
-      document.getElementById('content').innerHTML = tempElement.querySelector('.section-body').innerHTML;
-      document.getElementById('section-header').innerHTML = tempElement.querySelector('.section-title').innerHTML;
+      document.getElementById('content').innerHTML = DOMPurify.sanitize(tempElement.querySelector('.section-body').innerHTML);
+      document.getElementById('section-header').innerHTML = DOMPurify.sanitize(tempElement.querySelector('.section-title').innerHTML);
     })
     .catch(error => {
       console.error("Error in fetch operation:", error);
