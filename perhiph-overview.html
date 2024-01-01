@@ -1,0 +1,55 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Peripherals Overview
+  </div>
+  <div class='section-body'>
+    <h2>Peripherals Overview</h2>
+    <p>
+    The Wire Wrap Odyssey computer implements a simple memory-mapped peripheral model.
+    Peripherals connect to the CPU's address and data bus, and can use the <tt class=register>/WRAM</tt>
+    control signal to determine if data is being read from or written to addresses that
+    the peripheral "owns". The peripheral may also pull an IRQ line low to signal the CPU
+    for service.
+    </p>
+    <p>
+    Unlike a modern computer, peripherals in the Wire Wrap Odyssey are not dynamically
+    added and removed. They are hard-wired into the CPU itself (more like a microcontroller's
+    peripherals than a PC's peripherals). Drivers are implemented as part of the OdysseyOS
+    and memory ranges are hard-coded.
+    </p>
+    <p>
+    The Wire Wrap Odyssey has several functional peripherals today, with more on the way.
+    <ul>
+      <li><a href="javascript:show_content('periph-kb')">PS/2 Keyboard</a> - An ATtiny microcontroller
+        combined with some shift registers and glue logic allow for a simple interface to a PS/2
+        keyboard, without the OS having to perform scancode translation.</li>
+      <li><a href="javascript:show_content('periph-timer')">Realtime Clock and Timer</a> - A Maxim DS1511Y
+        (which is a clone of the ubiquitous Dallas RTC) provides clock and timer duties. The
+        DS1511Y also has a 256 byte battery-backed SRAM that can be used to store settings that
+        persist across reboots (in the early x86 computers, this is where the BIOS settings
+        were stored).</li>
+      <li><a href="javascript:show_content('periph-serial')">RS232 UART</a> - An 82C52 UART
+        provides a single RS232 serial port capable of up to 115200 baud. This old chip (designed
+        to be paired with the 8086) was chosen over the more popular 16550 UART, as the 82C52
+        requires a much smaller board footprint.</li>
+      <li><a href="javascript:show_content('periph-extram')">1MB Extended RAM</a> - Two blocks
+        of the memory range, <tt>0xd000-0xdffff</tt> and <tt>0xe000-0xefff</tt> are mapped to
+        a 1MiB extended memory. Two 8-bit registers provide the top eight bits of the address
+        used when reading or writing from <tt>0xd</tt> or <tt>0xe</tt> addresses, while the
+        lower twelve bits come from the CPU address bus. Having two configurable "windows" into
+        the same 1MiB of extended RAM makes for some interesting possibilities.</li>
+      <li><a href="javascript:show_content('periph-ata')">ATA Port</a> - Not yet implemented,
+        but planned for 2024. The original ATA bus specification is simple enough that it can
+        be implemented with some glue logic. The main complication is that reads and writes
+        are all with 16-bit data values. But once implemented, it should be possible to read
+        and write from essentially any ATA-compliant device, such as compact flash cards
+        and even old hard drives.</li>
+    </ul>
+    </p>
+  </div>
+</body>
+</html>
