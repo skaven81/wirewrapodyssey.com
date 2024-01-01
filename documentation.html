@@ -1,0 +1,92 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Documents &amp; Links
+  </div>
+  <div class='section-body'>
+    <h2>Notebook Scans</h2>
+
+    <p>
+    These are direct scans of my design and build notes. This is not meant to be a guide
+    for how to build your own Wire Wrap Odyssey computer. Mostly I'm keeping this around
+    for posterity.
+    <ul>
+      <li>Pre-Odyssey CPU design notes <a href="pdf/old_cpu.pdf" target=_blank>PDF</a> (last updated 2023-12-31)</li>
+      <li>Odyssey CPU notes <a href="pdf/cpu.pdf" target=_blank>PDF</a> (last updated 2023-12-31)</li>
+      <li>Odyssey Video Card notes <a href="pdf/video_card.pdf" target=_blank>PDF</a> (last updated 2023-12-31)</li>
+    </ul>
+    </p>
+
+    <h2>Source Code</h2>
+
+    <p>
+    The git repository with all the source code (and some additional notes) can be found at
+    <a href="https://github.com/skaven81/mycpu" target=_blank>https://github.com/skaven81/mycpu</a>
+    </p>
+
+    <p>
+    Some notable items in the git repository:
+    <ul>
+      <li><tt><a href="https://github.com/skaven81/mycpu/blob/master/assembler/control_signals" target=_blank>control_signals</a></tt>
+        - the lowest level of abstraction, mapping the control signals to output bits on a control ROM</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/blob/master/assembler/macros" target=_blank>macros</a></tt>
+        - the next level of abstraction, mapping control signal values (in hex/binary) to human-readable tokens describing
+        the behavior of each control signal setting.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/blob/master/assembler/gen_opcodes.sh" target=_blank>gen_opcodes.sh</a></tt>
+        - script that generates the <tt>opcodes</tt> list. Each opcode's microcode is encoded in the output of this script.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/blob/master/assembler/gen_roms.py" target=_blank>gen_roms.py</a></tt>
+        - script that takes the <tt>control_signals</tt>, <tt>macros</tt>, and <tt>opcodes</tt> as input, and generates the
+        control ROM binary images.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/blob/master/assembler/assembler.py" target=_blank>assembler.py</a></tt>
+        - custom assembler. Reads <tt>.asm</tt> files, performs various utility functions such as macro expansion, variable
+        memory assignment, and label rewriting. Sanity checks assembly programs and generates binaries that can be flashed
+        to the program ROM. The assembler reads <tt>opcodes</tt> and generates its parser dynamically.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/blob/master/assembler/opcode_cheatsheet" target=_blank>opcode_cheatsheet</a></tt>
+        - file I keep open when writing Odyssey assembly programs to help me remember the names of all the opcodes and
+        the various memory ranges and such.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/blob/master/assembler/asm_macros" target=_blank>asm_macros</a></tt>
+        - not to be confused with <tt>macros</tt>, this file is only read by the assembler, and defines a list of macros that
+        the assembler will replace with static values. Essentially the same as <tt>#define</tt> statements in C, but hackier.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/tree/master/assembler/lib" target=_blank>/assembler/lib/</a></tt>
+        - utility libraries that form the foundation of the OdysseyOS.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/tree/master/assembler/os_shell" target=_blank>/assembler/os_shell/</a></tt>
+        - the OdysseyOS top level assembly. This is where the code at <tt>0x0000</tt> in the program ROM comes from, and how
+        the Odyssey CPU bootstraps itself to a shell.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/tree/master/alu" target=_blank>/alu/</a></tt>
+        - the Odyssey ALU generation code. The ALU in the Odyssey is implemented as a LUT (look up table) in two ROMs. This 
+        directory contains the code for generating the ROMs and for testing the ALU behavior.</li>
+      <li><tt><a href="https://github.com/skaven81/mycpu/tree/master/logisim" target=_blank>/logisim/</a></tt>
+        - some of the more gnarly glue logic I first designed and tested in Logisim before implementing. The files in this
+        directory are not necessarily exactly what was implemented.
+    </ul>
+    </p>
+
+    <h2>External Links</h2>
+
+    <p>
+    <ul>
+      <li><a href="https://buildacpu.blogspot.com/" target=_blank>Buildacpu</a> - my first attempt at documenting my
+        homebrew CPU project. Covers 2010-2016. I made the move to wire wrap and the current Odyssey design, in 2019.
+        The current Odyssey design was heavily influenced by the prior failed attempts from the decade before.</li>
+      <li><a href="https://eater.net/" target=_blank>Ben Eater</a> - this guy is an amazing teacher and it was his
+        <a href="https://eater.net/vga" target=_blank>Let's build a video card!</a> video series that finally closed
+        the gap for me on how I would design the Odyssey CPU in such a way that it could work as a "real" computer
+        with a monitor, instead of just having an LCD or LED display. I heartily recommend all of Ben Eater's videos
+        and project kits.</li>
+      <li><a href="https://www.bigmessowires.com/bmow1/" target=_blank>BMOW-1 Computer</a> - the wildly popular
+        "Big Mess O'Wires" computer designed and built in 2008 or so by Steve Chamberlin was an early source of inspiration
+        for me to build my Odyssey computer. The BMOW-1 is a truly capable computer, with color graphics, a fully fleshed
+        out operating system, and loads of working peripherals. For some reason I completely ignored Steve's choice to use wire wrap
+        for his implementation, and this cost me several years of false starts trying to use breadboards and point-to-point
+        soldering. But I eventually came around and saw the light of wire wrap!</li>
+      <li><a href="http://www.homebrewcpu.com/" target=_blank>MAGIC-1 Computer</a> - another impressively implemented
+        homebrew CPU project. This one runs MINIX and is even connected to the internet.</li>
+    </ul>
+    </p>
+
+  </div>
+</body>
+</html>
