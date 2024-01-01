@@ -1,0 +1,62 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Video Card Overview
+  </div>
+  <div class='section-body'>
+    <h2>Video Card Overview</h2>
+    <p>
+    The video card was the first major component implemented in the Wire Wrap Odyssey CPU.
+    It served as a testbed to see if wire wrap was a feasible way of implementing the rest
+    of the Odyssey CPU, and is sufficiently isolated from the rest of the CPU that it could
+    be completely built and tested without having to build the rest of the CPU.
+    </p>
+    <p>
+    The video card design is heavily influenced by <a href="https://eater.net/vga" target=_blank>Ben Eater's VGA project</a>.
+    Like Ben Eater's project, the video card implements timing signals for a 640x480 pixel
+    display at 60Hz refresh rate.  However, unlike Ben Eater's project, I opted to use the
+    full speed 25.175MHz pixel clock, rather than Ben Eater's 10MHz pixel clock. The use
+    of a full speed pixel clock meant I could utilize all of the pixels in the display.
+    However, directly addressing 640x480 (307,200) pixels would require far more RAM than
+    I had available. So instead I opted for a "character display" where the 640x480
+    pixels are broken into a grid of 8x8 pixel glyphs. I further reduced this to only
+    64 glyphs wide (512 pixels) so that the resulting memory array for storing the
+    characters would fit precisely in a 4KiB range (<tt>0xn000-0xnfff</tt>). 480 lines is only
+    enough for 60 characters though, so in reality the range is <tt>0xn000-0xnefff</tt>.
+    Color is implemented by storing color data that is applied to each 8x8 glyph, in
+    a symmetric memory range.
+    </p>
+    <p>
+    Like everything else in the Wire Wrap Odyssey project, the video card was built up
+    bit by bit, giving me an opportunity to test each unit independently before moving
+    on to the next one.  See the detailed sections for more information on how each
+    sub-unit of the video card was implemented.
+    <ul>
+      <li><a href="javascript:show_content('video-hsync-vsync')">Hsync &amp Vsync Generation</a>
+        - basic timing requirements that allow a VGA monitor to sync. Once this sub-unit was
+        completed, I was able to connect a VGA monitor and see that it detects a 640x480 60Hz
+        signal.</li>
+      <li><a href="javascript:show_content('video-char')">Character Generation</a>
+        - this is the logic that generates the on/off signal for the CRT beam. As the pixel
+        clock ticks, characters are read from RAM, and their glyph is read from a font ROM.
+        This bitmap is then fed into a shift register that outputs the pixels that should
+        be on or off as the beam scans across each 8-pixel block of the display.</li>
+      <li><a href="javascript:show_content('video-color')">Color Generation</a>
+        - a similar process is used to read the color data from RAM for each 8x8 block, which
+        is then fed into a register that outputs into a DAC to generate the red, blue,
+        and green values for the VGA signal. The color data is six bit (64 colors) and
+        can implement blinking and/or a cursor at the character position.</li>
+    </ul>
+    </p>
+    <p>
+    <figure class='figure-container'>
+      <a href="img/GPU Block Diagram.drawio.svg" target=_blank><img src="img/GPU Block Diagram.drawio.svg"></a>
+      <figcaption class='figure-caption'>Block diagram of the Wire Wrap Odyssey video card. Click to open fullsize in a new tab.</figcaption>
+    </figure>
+    </p>
+  </div>
+</body>
+</html>
