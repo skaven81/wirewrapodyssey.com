@@ -1,0 +1,40 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Software Overview
+  </div>
+  <div class='section-body'>
+    <h2>Software Overview</h2>
+    <p>
+    There are three major blocks of software that had to be implemented to make
+    the Wire Wrap Odyssey work.
+    <ul>
+      <li><a href="javascript:show_content('sw-alu')">ALU Generation</a> - The Odyssey
+        ALU (arithmetic logic unit) is implemented as a LUT (look up table) in two ROMs.
+        Each ROM implements a 4-bit ALU, and two are combined to implement an 8-bit ALU.
+        Since the ALU is the "brain" of any CPU, it is critical that all ALU operations
+        function precisely and that all edge cases are accounted for. The ALU Generation
+        code performs exhaustive testing of all ALU operations, and generates the ROM
+        binary images. A simulator was also implemented so that ALU operations could be
+        tested without needing to flash a test program to the Odyssey program ROM.</li>
+      <li><a href="javascript:show_content('sw-assembler')">Assembler</a> - The assembler
+        code consists of a stack of programs that collectively define the microcode and
+        program code of the Odyssey CPU. The CPU's control circuitry is abstracted into
+        configuration files that can be easily modified should the CPU's hardware implementation
+        change. These configuration files are then used to generate a human-readable
+        microcode syntax, which in turn is used to define the CPU's opcode behavior.
+        The assembler then reads the opcode specification to generate a parser for assembly
+        files, which are processed into machine code that is written to the CPU's program ROM.</li>
+      <li><a href="javascript:show_content('sw-library')">OS Library</a> - With a functional
+        assembler, the abstraction moves up another layer by implementing Odyssey assembly
+        library functions to perform basic tasks like clearing the screen, implementing
+        a cursor and moving it around the display, interfacing with peripherals like the
+        keyboard and serial port, and allocating memory. These OS library functions roll
+        up to a top-level shell program, which forms the frontend of the OdysseyOS.</li>
+    </p>
+  </div>
+</body>
+</html>
