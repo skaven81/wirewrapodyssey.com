@@ -1,0 +1,376 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    History
+  </div>
+  <div class='section-body'>
+    <h2>The Wire Wrap Odyssey</h2>
+    <p>
+    The name "Odyssey" was intentional -- the computer system described on this site has
+    been in some form of design or implementation since 2010. It has gone through numerous
+    redesigns, false starts, and abject failures, before finally arriving at both a system
+    architecture and hardware implementation that resulted in success. It has taken over
+    a decade to get to this point! Truly an "odyssey".
+    </p>
+
+    <h3>A seed is planted: Computer Organization and Design</h3>
+
+    <p>
+    I attended Texas A&amp;M University from 2000-2005, graduating with a bachelor's degree
+    in computer science. During my senior year, I took as an elective, a 400-level course
+    on computer architecture. The textbook, <i>Computer Organization and Design: the
+    Hardware / Software Interface (2nd edition)</i> by David A. Patterson and John L. Hennessy,
+    presented a deep dive into the fundamental components of computation and into (somewhat)
+    modern CPUs in particular. While the textbook focused on the MIPS architecture, the
+    basic concepts of Harvard versus von Neumann design, pipelining, and how to break down
+    a CPU into its most basic components, are applicable to any CPU design.
+    The final project was to design a pipelined MIPS processor from scratch, and implement
+    it in Verilog. Completing this project was challenging but hugely entertaining, and
+    planted a seed in my mind that it should be possible to build a working CPU from just
+    basic components, instead of having to buy a pre-made CPU off the shelf.
+    </p>
+    <p>
+    <figure class='figure-container'>
+      <iframe class='figure-container' src="https://docs.google.com/gview?url=https:%2F%2Fwirewrapodyssey.com/pdf/mips2.pdf&embedded=true" frameborder="0"></iframe>
+      <figcaption class='figure-caption'>
+        The design notes for my college MIPS CPU project.
+        The blue lines were for my own reference as I implemented the design in Verilog,
+        so I could keep track of which nets I had finished.
+        There were two designs: a single-cycle and a pipelined one. The last page
+        shows the instruction encoding.
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    After graduating from college I had this persistent nagging feeling that building
+    my own CPU from scratch (not just simulating one in Veriglog) would be a fun project
+    to take on as a hobby. But as often happens, life goes on and it would be another
+    five years before I made any significant progress toward that goal.
+    </p>
+
+    <h3>Design #1: a bumpy road</h3>
+
+    <p>
+    In 2010 I was married, had a house, and had settled to the point that taking on a big
+    project like building a CPU became actually feasible. Plus, I had the good fortune of
+    finding an HP 16500B logic analyzer with a fully loaded complement of 100MHz and 1GHz
+    logic probes, for the astonishing price of $100 on Craigslist. So not only did I now
+    have the time and resources, I also had a powerful debugging and visualization tool
+    that would make the design process a lot easier.
+    </p>
+    <p>
+    In 2010 I created a blog, <a href="https://buildacpu.blogspot.com" target=_blank>https://buildacpu.blogspot.com</a>,
+    where I started recording my progress. You can read through the posts there for more
+    details, but I'll give a high level summary here.
+    </p>
+    <p>
+    The first thing I did was to create a set of plans for how the CPU would be built.
+    The design was heavily influenced by my MIPS processor from college, and attempted
+    to use some of the same core concepts, such as a fixed instruction length, and to
+    use the instruction register itself as a significant part of the control circuitry.
+    I envisioned the system having a common bus/backplane with nearly 80 pins. Each
+    CPU component would be built on a separate prototype board and would plug into the
+    backplane.
+    <figure class='figure-container'>
+      <iframe class='figure-container' src="https://docs.google.com/gview?url=https:%2F%2Fwirewrapodyssey.com/pdf/old_cpu.pdf&embedded=true" frameborder="0"></iframe>
+      <figcaption class='figure-caption'>
+        The plans for my first serious attempt to build a homebrew CPU.
+        Early 2005.
+      </figcaption>
+    </figure>
+    </p>
+
+    <p>
+    The basic idea at this stage was to break the whole CPU down into seven
+    boards that would all connect to a common backplane.
+    </p>
+    <p>
+    <figure class='figure-container' style='width:400px;'>
+      <img src="img/old_cpu_block.png">
+      <figcaption class='figure-caption'>
+        Block diagram for my first CPU attempt
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    I did a LOT of work on this attempt. I really thought I had a good design, and
+    had broken things down in a way that it wouldn't be "boiling the ocean" to get
+    any single unit constructed.
+    </p>
+    <p>
+    However, the devil was very much in the details. I successfully constructed the
+    first block, the clock/reset generation board, but got bogged down trying
+    to build anything else beyond that, largely due to the complexity of getting
+    a backplane design working. I started out doing point-to-point soldering, but
+    quickly found that this would not scale to the large number of nets required
+    for things like 16-bit bus wiring.
+    </p>
+    <p>
+    <figure class='figure-container'>
+      <div style='overflow:auto'>
+        <img src="img/old_clock_unit1.jpg" style='display:inline-block; margin-right:10px; max-width:49%'>
+        <img src="img/old_clock_unit2.jpg" style='display:inline-block; max-width:49%'>
+      </div>
+      <figcaption class='figure-caption'>
+        My first attempt at the clock/reset unit, clock distribution buffers, and
+        program counter. Note the point-to-point wiring using 30 gauge solid wire.
+        March 22, 2010
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    I tried many different designs for a backplane, and even experimented with etching
+    my own PCBs (in 2010, there was no PCBWay offering $5 professionally printed PCBs).
+    Eventually I found this really great prototyping board called BusBoard, and used
+    it to create a slick backplane around DIN-41612 VME-style connectors.
+    </p>
+    <p>
+    <figure class='figure-container'>
+      <div style='overflow:auto'>
+        <img src="img/old_etched_backplane.jpg" style='display:inline-block; margin-right:10px; max-width:49%'>
+        <img src="img/old_vme_backplane.jpg" style='display:inline-block; max-width:49%'>
+      </div>
+      <figcaption class='figure-caption'>
+        The farthest I got with a self-etched PCB backplane. The image on the left is the backplane for just
+        one of the many units I'd need to build. The 40-pin sockets were to connect to the other units
+        of the CPU using ribbon cable. On the right is the "rebooted" design using VME connectors as a backplane.
+        October 20, 2012
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    At this point I just couldn't keep up the motivation to work on the project. Etching
+    my own PCBs was proving to be difficult and error prone. And doing most of the design work
+    in CAD was sapping all the fun out of the project. I wanted to <i>build</i> something
+    with my hands, not draw a bunch of polygons in CAD and print them on a circuit board then
+    mindlessly solder components to a PCB.
+    </p>
+    <p>
+    And so I stopped. For several years. The project continued to tickle at the back of my mind,
+    but each time I thought about restarting it, the prospect of dealing with all the soldering
+    and PCB etching and dozens of ribbon cables and all -- just felt like too much to take on.
+    </p>
+
+    <h3>A New Hope: The Odyssey Video Card</h3>
+
+    <p>
+    Which brings us to 2019. And the incredible Ben Eater. At some point his videos began to
+    appear in my YouTube feed, and I found them very interesting.  But the video that absolutely
+    floored me was his "Let's Build a Video Card" series.
+    </p>
+    <p>
+    <iframe width="560" height="315" align=center src="https://www.youtube.com/embed/l7rce6IQDWs?si=9ZxlMNSIiHktulOm" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    </p>
+    <p>
+    In this video (and the ones following it), Ben Eater describes, in amazingly approachable
+    style, how with just a handful of simple logic components like counters and NAND gates formed
+    into SR latches, one can generate VGA signal timing and display a full color image on a display.
+    And it could be built on breadboards!
+    </p>
+    <p>
+    Now <i>this</i> looked like a fun project I had to take on. I ordered the parts I'd need
+    and started prototyping something on a bunch of breadboards. I was able to get a monitor
+    to display an image! My HP 16500B logic analyzer came in really handy for debugging the latches
+    and counters and validating the timing (at the time, I didn't have an oscilloscope, so I
+    used the 1GHz logic probes in timing mode to check timing down to 1ns resolution).
+    </p>
+    <p>
+    But the limitations of breadboard based design were quickly apparent. Any nets that required
+    lots of interconnections were troublesome, as at best you only have five breadboard ports
+    per net. And breadboards themselves are a pain to work with - the connections are unreliable
+    and when you have multiple breadboards hooked together, flexing them more often than not would
+    cause wires to pull out of their sockets. Storing the project in a closet and pulling it back
+    out again the next weekend would inevitably result in a couple hours of debugging just to
+    get back to where I left off the previous weekend.
+    </p>
+    <p>
+    And so after some discussion with the nice folks at the /r/electronics subreddit, I decided
+    to migrate the design to wire wrap prototyping board. Wire wrap eliminates all the problems
+    with breadboards, without introducing any additional prototyping complexity. It's absolutely
+    crazy to me that wire wrapping has fallen out of favor in the maker/hacker community.  It's awesome!
+    </p>
+    <p>
+    <figure class='figure-container'>
+      <div style='overflow:auto'>
+        <img src="img/old_videocard1.webp" style='display:inline-block; margin-right:10px; max-width:49%'>
+        <img src="img/old_videocard2.jpeg" style='display:inline-block; max-width:49%'>
+      </div>
+      <figcaption class='figure-caption'>
+        My first build of a video card, on breadboards. The limitations of breadboard design
+        were quickly reached, however, and after discussion on the /r/electronics subreddit,
+        I decided to migrate the design to wire wrap, shown in the image on the right.
+        September 2, 2019
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    Once I got the basic video card signaling working, that little bug in the back of my head
+    started scratching again. I started imagining how I could hook this video card up to a
+    dual-port RAM instead of to an EEPROM like Ben Eater's design, and use it as a proper video card.
+    I noodled about thinking how I could perform character generation to avoid having to map
+    every single pixel in video RAM. And how I could map color to the characters too.
+    </p>
+    <p>
+    The result, now that I had started working on wire wrap prototyping board, was a design document
+    for a proper video card for a new CPU design that I had not yet quite figured out, but was starting
+    to see a vision come together.
+    </p>
+    <p>
+    <figure class='figure-container'>
+      <iframe class='figure-container' src="https://docs.google.com/gview?url=https:%2F%2Fwirewrapodyssey.com/pdf/video_card.pdf&embedded=true" frameborder="0"></iframe>
+      <figcaption class='figure-caption'>
+        The wire wrap board design documents for what would become the Odyssey video card, RAM, and ROM
+        module. November 2, 2019
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    With the video card working, and a solid amount of experience under my belt, I was now ready
+    to take on the CPU project that I had been thinking about for over a decade! Except instead of
+    building the CPU and then designing a video card for it, I was going to do it the other way
+    around, and build a CPU that could interface with the video card I had already built.
+    </p>
+    <p>
+      <iframe width="560" height="315" src="https://www.youtube.com/embed/UrNCBQSrmbg?si=YSxRlG-IIk985akV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    </p>
+    <p>
+    Here's a list of links to Reddit posts where I recorded my progress on the video card:
+    <ul>
+      <li><a href="https://www.reddit.com/r/electronics/comments/cp3ww9/ben_eater_inspired_video_card/">August 11, 2019</a></li>
+      <li><a href="https://www.reddit.com/r/electronics/comments/cyx1px/update_ben_eater_inspired_video_card/">September 2, 2019</a></li>
+      <li><a href="https://www.reddit.com/r/electronics/comments/dh42mh/update_ben_eaterinspired_vga_video_card/">October 12, 2019</a></li>
+      <li><a href="https://www.reddit.com/r/electronics/comments/dnm6r0/update_2_ben_eater_inspired_vga_video_card/">October 26, 2019</a></li>
+      <li><a href="https://www.reddit.com/r/electronics/comments/dqv9z1/ben_eaterinspired_vga_video_card_is_alliiivveee/">November 2, 2019</a></li>
+    </ul>
+    </p>
+
+    <h3>The Wire Wrap Odyssey CPU</h3>
+
+    <p>
+    With all the experience I had gained from the video card project, I was able to dive in headfirst into
+    the CPU project. I purchased a new old stock Augat wire wrap prototyping board with six groups of nine
+    pin columns, each with 50 pins. That's 2,700 wire wrap posts, all with gold-plated machined sockets for
+    the ICs, and reliable and global power and ground planes.
+    </p>
+    <p>
+    As with the video card project, I started tackling the CPU one small step at a time. First I needed
+    to generate a clock signal and a reset signal that was predictable and deterministic (reset should
+    only be de-asserted on a specific clock edge, so that subsequent design could count on the reset
+    behavior being consistently timed with the clock). This got built in the first column or two of the
+    new board. Then I built a program counter that could count up or load new data from the data bus, or
+    present its value to the address bus. At this point the "buses" were just pullup resistor arrays.
+    But then I added a 40-pin interface to the video card's RAM and suddenly I could execute some basic
+    read and write instructions to and from RAM using some static instructions in the program ROM.
+    And that's when I hit the first major milestone, <a href="https://www.reddit.com/r/electronics/comments/hqijyg/never_been_so_happy_to_see_hello_world/">"Hello, World!"</a>
+    </p>
+
+    <p>
+    <figure class='figure-container'>
+      <div style='overflow:auto'>
+        <img src="img/hello_world1.jpeg" style='display:inline-block; margin-right:10px; max-width:49%'>
+        <img src="img/hello_world2.jpeg" style='display:inline-block; max-width:49%'>
+      </div>
+      <figcaption class='figure-caption'>
+        Hello, World! The Wire Wrap Odyssey was able to execute machine code! In the image on the right,
+        observe how I had wired in logic analyzer probe ports, so I could quickly attach my
+        HP 16500B logic analyzer for troubleshooting code execution. July 13, 2020
+      </figcaption>
+    </figure>
+    </p>
+
+    <p>
+    After basic execution was achieved, I tackled additonal components one at a time. I didn't have an
+    overall architecture plan.  Instead, I would consider what to add <i>next</i> that would make the
+    CPU more capable, and then implement it. Then repeat with some other unit. The giant wire wrap board
+    meant the whole CPU could grow on a single board without having to link a bunch of sub-boards together
+    on a backplane or with a bunch of ribbon cables. The connections are solid, reliable, and resistant
+    to vibration and rough handling.
+    </p>
+    <p>
+    I implemented new units in the following order. Not because I "planned" it that way, but just because
+    each new unit I added just seemed like the right thing to do at the time.
+    <ul>
+      <li><b>Transfer Registers</b> - To implement instructions that had to swap data or stage data within
+        micro-ops, I'd need some registers to temporarily store things like addresses and data. So I added
+        the <tt class=register>TAH</tt>, <tt class=register>TAL</tt>, and <tt class=register>TD</tt> registers.
+        </li>
+      <li><b>Stack Pointer</b> - I needed to implement a <tt>CALL</tt> instruction and the ability to enter
+        and return from subroutines. To do this I'd need a stack to store the current program counter value,
+        so the <tt>RET</tt> instruction could get back to where it came from. So I added an 8-bit register
+        that could be incremented and decremented by micro-code, and a constant register at <tt>0xbf</tt>,
+        and that now allowed for opcodes to manipulate a stack by incrementing and decrementing a stack
+        pointer and writing/reading RAM at its location.
+        </li>
+      <li><b>ALU</b> - Up to this point the CPU could only do static operations, loading and storing
+        data to and from different places in RAM. I needed an ALU to make the CPU "smart". I considered
+        using <tt>74LS191</tt> 4-bit ALUs, but opted against it due to the limited ALU operation set.
+        Instead I implemented my own ALU using a lookup table approach. Then wired it together with
+        four registers (<tt class=register>AH</tt>, <tt class=register>AL</tt>, <tt class=register>BH</tt>, and <tt class=register>BL</tt>),
+        and wrote new opcodes that could perform ALU operations.
+        </li>
+      <li><b>C and D registers</b> - I found that just four registers was going to make writing code
+        for the CPU pretty difficult. There were also some common operations dealing with 16-bit values,
+        such as addresses, where being able to increment and decrement those values without the ALU,
+        would be beneficial. So I implemented it in hardware, as a set of four more registers,
+        <tt class=register>CH</tt>, <tt class=register>CL</tt>, <tt class=register>DH</tt>, and <tt class=register>DL</tt>.
+        These registers were implemented using up-down counters and thus opcodes could be written
+        that would increment or decrement the full 16-bit values independently of the ALU.
+        </li>
+      <li><b>Interrupt handling</b> - When I first implemented the instruction register and microcode
+        sequencing, I had the forethought to consider implementing interrupts as a special opcode. I had
+        already added the gates to control loading the "next" opcode versus the IRQ opcode, and had tied
+        that signal up with a pull-up resistor for future implementation. Well, that time had come.
+        I added a priority encoder and the necessary glue logic to trigger the loading of the IRQ
+        opcode. This then precipitated a loooong series of design tweaks to work around places where
+        my prior design had not been made interrupt-safe. For example, the status register from the
+        ALU needed to be saved upon entering the interrupt vector, so that when exiting the interrupt
+        vector, the interrupted code could continue with the same status bits that were there before.
+        This required a bunch of bodges to get everything working.  But eventually it did work!
+        </li>
+      <li><b>PS/2 keyboard</b> - At this point I felt the CPU was complete, and now needed to start
+        adding peripherals so I could interact with the CPU as a real computer. I already had an output
+        device (the video card) but no input device. So I set about adding a PS/2 keyboard interface.
+        This was the only part of the project where I opted to use a microcontroller (an ATtiny8)
+        to avoid the drudgery of trying to handle PS/2 scancode decoding in the keyboard driver's
+        interrupt vector.
+        </li>
+      <li><b>Real time clock &amp; timer</b> - If I was ever going to be able to write games for
+        my computer, I'd need a timer that could trigger interrupts, so that (for example) I could
+        trigger a screen redraw every 0.05 seconds (20 fps). I found that the ubiquitous Dallas
+        clock module could do this <i>and</i> had a clock, <i>and</i> a non-volatile RAM for storing
+        settings across reboots. Awesome! So I added that as a peripheral.
+        </li>
+      <li><b>RS232 UART</b> - I also considered that being able to connect the CPU to another
+        computer to receive or send data was going to be crucial. A serial port would be an easy
+        way of doing this with a minimal number of chips. So I picked a UART chip (82C52) and
+        integrated it as a peripheral.
+        </li>
+      <li><b>Extended RAM</b> - After writing a ton of OS library code, I found that the 32KiB
+        of main system RAM was not really going to be enough. The video RAM took 8KiB, and another
+        4KiB was being used for things like the CPU stack, a software heap, and buffers for the
+        keyboard and serial port. That left only 20KiB of properly usable RAM. So I set about
+        adding as much RAM as I could, using the popular "paged" approach used by many computers
+        of the 80s and early 90s. With this approach I could get an effective 20 bit address
+        space for the extended RAM, so I added a 1MiB extended RAM to the system.
+        </li>
+    </ul>
+    And that brings us to January 2024. The Wire Wrap Odyssey computer is fully operational, but
+    still has lots of work to do. In particular, I still need to implement an ATA port, so I can
+    have some kind of file system and removable media to work with, to make it possible to author
+    programs and assemble them on my "real" computer, then just jam a disk or card into the Odyssey
+    and run them without having to reflash an EEPROM. There are also numerous gremlins still
+    lurking in the hardware and software that I still need to work out. For example, scrolling
+    the display too many times, quickly, will eventually cause the CPU to crash. And issuing
+    a cursor-up command will <i>sometimes</i> cause the CPU to crash.
+    </p>
+    <p>
+    The Wire Wrap Odyssey has been a labor of love for over a decade. And it has been a load of
+    fun so far! I'll try to keep this website updated with progress as I continue to work on it.
+    Thanks for reading!
+    </p>
+  </div>
+</body>
+</html>

@@ -253,5 +253,6 @@ hr{border:0;border-top:1px solid #eee;margin:20px 0}
 
 .figure-container {border:1px solid #ccc; padding:10px; margin:0;}
 .figure-container img {max-width:100%; height:auto; display:block;}
+.figure-container iframe {width:100%; height:400px; display:block;}
 .figure-caption {font-style:italic; color:#666; margin-top:8px;}
 
