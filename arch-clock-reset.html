@@ -1,0 +1,148 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Architecture: Clock &amp; Reset Generation
+  </div>
+  <div class='section-body'>
+    <h2>Architecture: Clock &amp; Reset Generation</h2>
+
+    <h2>Objectives</h2>
+    <p>
+    The clock signal is the beating heart of any digital project like this, and
+    so it is important that the clock signal be strong and clean, with sharp edges
+    and a consistent frequency. Additionally, the clock signal on a project like
+    the Odyssey requires that it be tunable across a wide range of frequencies, to
+    aid in both detection and mitigation of signal propagation timing issues.
+    </p>
+    <p>
+    The reset signal might sound trivial, but it's actually really important to
+    set up properly. My professor in my computer architecture class in college once
+    quipped that "coming out of reset is the hardest part of building a CPU". If
+    you think about it, that makes sense. Every stateful component in the system
+    must be able to reset to a known-good state (which isn't necessarily "all zeroes")
+    when the <tt>/RST</tt> signal is asserted. And what happens if <tt>/RST</tt>
+    were to bounce? It needs to be asserted long enough for the whole CPU to properly
+    reset. And then what about coming <i>out</i> of reset? The reset signal needs
+    to be synchronized with the clock so that coming out of reset happens just as
+    predictably as everything else.
+    </p>
+
+    <h2>Clock Signal</h2>
+    <p>
+    In early prototypes, I used a 32.768kHz watch crystal fed into a ripple counter,
+    with a multiplexer used to select from a collection of frequency divisions.
+    I also incorporated a mechanism to provide a manual clock, as I figured this
+    would be helpful for troubleshooting. My first attempt was built on protoboard
+    using point-to-point soldering.
+    </p>
+    <p>
+    <figure class='figure-container'>
+      <div style='overflow:auto'>
+        <a href="photo/old_clock_reset1.jpg" target=_blank><img src="photo/old_clock_reset1_web.jpg" style='display:inline-block; margin-right:10px; max-width:49%'></a>
+        <a href="photo/old_clock_reset_schem.jpg" target=_blank><img src="photo/old_clock_reset_schem_web.jpg" style='display:inline-block; max-width:49%'></a>
+      </div>
+      <figcaption class='figure-caption'>
+        My first clock/reset signal generation circuit. Click to open full size image in new tab.
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    When I later rebooted the project, after building the video card on wire wrap
+    board, I needed to re-implement the clock and reset unit. But this time, I had
+    firsthand experience with troubleshooting the video card, which has a 25MHz
+    clock, and found that since I had a logic analyzer, single-stepping using a switch
+    on the board was really unnecessary. And that clock speeds of 1MHz or more would
+    be desirable, if I wanted performance similar to the 6502-based Commodore 64 or
+    Apple ][ computers.
+    </p>
+    <p>
+    With these new requirements in mind, I searched the 7400-series of chips and came
+    across the <tt>74x624</tt>, a voltage-controlled oscillator. With this chip I could
+    use a potentiometer to generate a 0-5v variable signal, and feed that into one
+    of the pins on the chip, and the output would scale accordingly. A "range" input
+    allowed me to fix the frequency range to a band that would be appropriate for this
+    project.
+    </p>
+    <p>
+    <figure class='figure-container'>
+      <div style='overflow:auto'>
+        <a href="photo/new_reset_clock_schem.jpg" target=_blank><img src="photo/new_reset_clock_schem_web.jpg" style='display:inline-block; margin-right:10px; max-width:49%'></a>
+        <a href="photo/clock_624_chart.jpg" target=_blank><img src="photo/clock_624_chart_web.jpg" style='display:inline-block; max-width:49%'></a>
+      <figcaption class='figure-caption'>
+        Left, schematic and netlist for the Odyssey clock and reset signal generation circuitry.
+        Right, VCO frequency chart from the '624 datasheet.
+        Click to open full size in a new tab.
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    The '624 VCO was fed with a 2.5v signal to the <tt>RNG</tt> (range) input, by simply pairing a couple
+    10k resistors into a voltage divider. The <tt>FC</tt> (frequency control) input is fed through a similar
+    voltage divider, only one half of the divider is a 50k 10-turn trim pot. According to the '624 datasheet,
+    if <tt>RNG</tt> is 2.5v, then the output frequency would scale from about 1MHz when <tt>FC</tt> is near
+    0v, up to about 12MHz when <tt>FC</tt> is near 5v. This primary clock output is then fed through
+    a D flip-flop to reduce the frequency in half and ensure a nice clean square wave. Finally that signal
+    (and its inverse) is fed into some inverters that act as buffers, so the output signal for the rest
+    of the board is as strong as possible. The final result is that I can scale the clock from about
+    500kHz up to about 6MHz by adjusting the trimpot on the board, and I see a very clean and sharp square
+    wave on my oscilloscope across the full frequency band.
+    </p>
+
+    <h3>Reset Signal</h3>
+    <p>
+    Next is the <tt>/RST</tt> signal. There are a few requirements:
+    <ul>
+    <li>When the reset button is released, the <tt>/RST</tt> signal must only return to a high level
+        on a rising clock edge</li>
+    <li>Once <tt>/RST</tt> goes low, it must stay low for at least a full clock cycle</li>
+    <li><tt>/RST</tt> should be low on initial power-up and stay low long enough for the system to
+        stabilize (e.g. all the capacitors charge) before being de-asserted automatically</li>
+    </ul>
+    </p>
+    <p>
+    Ensuring the first condition is accomplished by having the reset button input go into the
+    input of a D flip-flop, which is tied to the clock.  The output of the D flip-flop will only change
+    on rising clock edges, satisfying the first condition.
+    </p>
+    <p>
+    The second condition I kind of ignored, as when you're talking about clock frequencies in the MHz range,
+    it's not actually possible to toggle a button fast enough to cause a reset pulse small enough to cause
+    problems. And even if it did happen by chance, I could just press the reset button again. No big deal.
+    </p>
+    <p>
+    The third condition is satisfied by adding an RC circuit to the reset button, so that on powerup,
+    the capacitor is discharged and thus holds the signal low as the system powers up. Once the capacitor
+    is sufficiently charged (through a resistor), the voltage rises high enough to allow the reset signal
+    to be de-asserted.
+    </p>
+    <p>
+    In the netlist/diagram above, you can see the reset circuitry drawn out in the top-right corner of the
+    page. The reset button is tied to ground, and tied up with a 10k pull-up resistor. A second 10k resistor
+    is paired with an 0.1uF capacitor to form the RC circuit. With 20k of resistance, the time constant is
+    2ms, which is plenty of time for the rest of the circuit to come up to speed. The output of the RC
+    circuit (and the pull-down reset button) goes into a schmitt trigger inverter. A schmitt trigger will
+    switch from high to low (or vice versa) at different voltages, which prevents a slowly rising (or falling)
+    input signal from causing a high frequency "flapping" output. As the schmitt trigger's input voltage
+    rises over (for example) 3.5v, it will switch its output to low.  But as the input voltage goes back down,
+    it has to go below (for example) 1.5v before its output will switch to high.
+    </p>
+    <p>
+    The D flip-flop takes the <tt>CLK</tt> signal, ensuring that the output signals only change on a
+    rising clock edge. The output from the D flip-flop is the <tt>/RST</tt> signal, and conveniently,
+    flip flops provide an inverted output so I get <tt>RST</tt> (an inverted reset signal) for free.
+    </p>
+    <div class="tip-container">
+      <b>Note:</b> throughout my schematics and netlists, I <i>consistently</i> use <tt>/RST</tt> and <tt>RST</tt>
+      incorrectly. Anywhere I use <tt>RST</tt> it means "the active-low reset signal", and <tt>/RST</tt>
+      is "the active-high reset signal". I still, to this day, have no clue why I did that, but once I had
+      a few pages of notes with the signals backwards, I just had to stick with it. Many regrets.
+    </div>
+
+
+
+  </div>
+</body>
+</html>
