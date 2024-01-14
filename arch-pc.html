@@ -1,0 +1,105 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Architecture: Program Counter
+  </div>
+  <div class='section-body'>
+    <h2>Architecture: Program Counter</h2>
+
+    <h3>Overview</h3>
+    <p>
+    The program counter is really just a 16-bit register, that stores the address
+    of the current instruction. Functionally, it needs to be able to load different
+    addresses, and it would be helpful if it could also be incremented automatically
+    without needing to involve the ALU. As I was building the Odyssey, this was the
+    first unit I constructed after the clock and reset unit, meaning there was no
+    ALU, no memory bus -- literally nothing else. So it had to operate independently
+    of other units and control signals at this early stage.
+    </p>
+
+    <h3>Control Signal Design</h3>
+    <p>
+    The behavior of the program counter can be distilled down to the following behaviors:
+    <ul>
+    <li>Do nothing</li> 
+    <li>Increment</li>
+    <li>Load a new address from the data bus</li>
+    <li>Present the PC address to the address bus</li>
+    </ul>
+    I found that the <tt>74x161</tt> synchronous 4-bit counters with parallel load would
+    work well for the program counter register. The outputs of the '161 counters are fed into some
+    <tt>74x245</tt> bus transceivers, to allow control of whether the PC value should be
+    presented to the address bus. And the '161 has control signals to indicate whether
+    the data presented to the four input lines should be loaded on the next rising clock
+    edge. Conveniently, the '161 also has an asynchronous clear input that allows resetting
+    the counter to zero any time.
+    </p>
+    <p>
+    Since it would be convenient to be able to present the register value to the address
+    bus (or not) separately from determining whether the register should be preloaded with
+    new data from the address bus or incremented on the next clock edge, I broke out the
+    control signals into two pairs, resulting in the following truth tables:
+    <ul>
+    <li><tt>PCRSEL 00</tt> - do nothing</li>
+    <li><tt>PCRSEL 01</tt> - <tt class=register>PC</tt> presented to address bus</li>
+    <li><tt>PCRSEL 10</tt> - <tt class=register>PCL</tt> presented to data bus</li>
+    <li><tt>PCRSEL 11</tt> - <tt class=register>PCH</tt> presented to data bus</li>
+    </ul>
+    <ul>
+    <li><tt>PCWSEL 00</tt> - do nothing</li>
+    <li><tt>PCWSEL 01</tt> - Increment <tt class=register>PC</tt></li>
+    <li><tt>PCWSEL 10</tt> - Write data bus to <tt class=register>PCL</tt></li>
+    <li><tt>PCWSEL 11</tt> - Write data bus to <tt class=register>PCH</tt></li>
+    </ul>
+    These signals were chosen somewhat strategically.
+    </p>
+    <p>
+    First, using <tt>00</tt> to mean "do nothing" makes it easier to establish
+    default behavior, by using pull-down resistors on the signal lines. This
+    allows the circuit in test to be powered up and have the clock running, but
+    nothing happening. I can then trigger behavior by pulling a signal high (even
+    just by touching a 5v wire to the appropriate pin) and have that trigger the
+    logic analyzer so I can observe the behavior of the outputs.
+    </p>
+    <p>
+    Second, observe that the operations that deal with 8-bit hi/lo values use the
+    same bit pattern. Both are placed where the high bit of the control signal is
+    high, and that allows the low bit of the control signal to be mapped directly
+    to the hi/lo register circuitry.
+    </p>
+
+    <h3>Implementation</h3>
+    <p>
+    Below you can see my notes for lining up the signals for the various chips.
+    <figure class='figure-container'>
+      <div style='overflow:auto'>
+        <a href="photo/pc_schem.jpg" target=_blank><img src="photo/pc_schem_web.jpg"></a>
+      <figcaption class='figure-caption'>
+        Design notes and Logisim schematic for the program counter control signals.
+        Click to open full size in new tab.
+      </figcaption>
+    </figure>
+    </p>
+    <p>
+    The rightmost page in the notes shows how everthing is glued together. The '161
+    counters are on the left and form a synchronous 16-bit counter. The outputs
+    are fed into two '245 bus transceivers which can be enabled to present the full
+    16-bit value to the address bus. The counter outputs are also fed into a pair of
+    '257 selectors, which can place either the high 8-bits or low 8-bits on the data
+    bus (or go into a hi-z state when neither are selected).
+    </p>
+    <p>
+    The glue logic for the <tt>PCRSEL</tt> and <tt>PCWSEL</tt> signals provide
+    the control inputs, such as the <tt>/OE</tt> (output enable) signals for
+    the '245s and the <tt>/LOAD</tt> signals for the '161s.
+    </p>
+    <p>
+    The resulting implementation on the wire-wrap board consumes columns C/D (the '161
+    counters) and E/F (the '245s and '257s for presenting to the buses).
+    </p>
+  </div>
+</body>
+</html>
