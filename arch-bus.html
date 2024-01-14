@@ -1,0 +1,70 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Architecture: Address and Data Bus
+  </div>
+  <div class='section-body'>
+    <h2>Architecture: Address and Data Bus</h2>
+
+    <h3>Overview</h3>
+    <p>
+    There is not much to say about the buses. The address bus is 16 bits wide,
+    and the data bus is 8 bits wide.
+    </p>
+
+    <h3>Pullups</h3>
+    <p>
+    Both buses are pulled high with 330 ohm pullup
+    resistors. Yeah, that's pretty low for a pullup resistor (and causes any chip
+    sinking a bus line to sink 15mA per pin!) but it turned out to be necessary
+    to get the signal propagation time down low enough to run at 2MHz and above.
+    </p>
+
+    <p>
+    The signal propagation problem is because address decoding is the first step
+    in many of the CPU units. For example, the RAM, ROM, and peripherals must not
+    put any data on the data bus, if the address lines are all high. So the time
+    it takes from a rising clock edge (and thus a new micro-op), then there is
+    propagation through the control ROMs, which then trigger propagation through
+    things like bus transceivers to enable or disable output to the address bus.
+    Assuming nothing is supposed to be presenting data to the address bus, all that
+    propagation delay has to happen first, and then it takes some time for the
+    pullup resistors to draw all of the address lines high.
+    </p>
+    <p>
+    For most of the design process, 1K pullups worked fine, but once I added the
+    auxiliary prototyping board with the extended RAM on it, I found that the
+    system would not run stably at reasonable clock speeds anymore. Using my
+    oscilloscope I found that the address lines were sometimes taking too long
+    to come back to a high state, which meant that the extended RAM (or ROM,
+    or RAM) were taking too long to quiesce the data bus, causing data corruption.
+    Going to a 330 ohm pullup solved the problem for now, but long term I plan
+    to swap out <tt>HC</tt> series components that are in the critical timing path, with
+    <tt>A</tt> series components that have lower propagation delays, which should
+    solve the problem in a more appropriate way.
+    </p>
+
+    <h3>Bus Interface</h3>
+    <p>
+    The three boards of the computer are connected by a 40-pin cable (just a standard
+    IDE cable) that carries the address and data bus signals, along with the <tt>/WRAM</tt>,
+    <tt>CLK</tt>, and <tt>RST</tt> signals. The pinout is loosely based on the ATA spec.
+    </p>
+
+    <p>
+    <figure class='figure-container'>
+      <img src="photo/interconnect.png" style='display:inline-block; margin-right:10px; max-width:49%'>
+      <figcaption class='figure-caption'>
+        The pinout of the bus interface socket
+      </figcaption>
+    </figure>
+    </p>
+
+
+
+  </div>
+</body>
+</html>
