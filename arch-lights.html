@@ -1,0 +1,65 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Architecture: Blinkenlights
+  </div>
+  <div class='section-body'>
+    <h2>Architecture: Blinkenlights</h2>
+
+    <h3>Overview</h3>
+    <p>
+    Every good electronics project needs some blinking lights, right?
+    I debated whether I should add LEDs to the board that would show things
+    like control signal states, register values, and bus states. At MHz
+    clock speeds, anything visible in the LEDs would be a blur too fast
+    to make any sense of.
+    </p>
+    <p>
+    But I decided that it just wasn't a proper homebrew computer project
+    if I didn't at least have <i>some</i> lights, so I decided to add
+    visualization for the address and data buses.
+    </p>
+
+    <h3>Implementation</h3>
+    <p>
+    It's a very simple setup. I have three LED bars, each with ten LEDs.
+    I only use eight LEDs from each one. The data and address buses are fed
+    into three <tt>74HC245</tt> bus transceivers (because I had them handy)
+    and the outputs of the transceivers go directly into the LED anode. The
+    LED cathodes go into 330 ohm resistors (in a DIP network) for current
+    limiting purposes.
+    </p>
+    <p>
+    The <tt>74HC245</tt> can push around 20-30mA per output; with a 330
+    ohm resistor and 5 volts that's 15mA, and the displays are sufficiently
+    bright.
+    </p>
+
+    <h3>But are they useful?</h3>
+    <p>
+    Surprisingly, yes! It turns out that there are certain states that the
+    CPU can get into, where being able to see the bus activity clearly indicates
+    that something has gone wrong (or that the CPU is still working correctly).
+    </p>
+    <p>
+    In particular, the opcode for the <tt>HLT</tt> is <tt>0xff</tt>, so if
+    I see the data bus just sitting there with all 8 LEDs fully lit, and
+    the program seems to have done what I expected, then I can reasonably assume
+    that the program ran as I expected (up to the <tt>HLT</tt> instruction)
+    without having to dig out the logic analyzer.
+    </p>
+    <p>
+    It also turns out that many operations, even something fast like processing
+    a keystroke, cause an easily apparent flash on the LED bars as the program
+    jumps to another part of memory. The LED bars look decidedly different while
+    processing the keystroke than they do in the idle loop waiting for an interrupt.
+    </p>
+    <p>
+    All said, I'm glad I added them to the board.
+    </p>
+  </div>
+</body>
+</html>
