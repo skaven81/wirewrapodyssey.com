@@ -32,7 +32,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     planted a seed in my mind that it should be possible to build a working CPU from just
     basic components, instead of having to buy a pre-made CPU off the shelf.
     </p>
-    <p>
+
     <figure class='figure-container'>
       <iframe class='figure-container' src="https://docs.google.com/gview?url=https:%2F%2Fwirewrapodyssey.com/pdf/mips2.pdf&embedded=true" frameborder="0"></iframe>
       <figcaption class='figure-caption'>
@@ -43,7 +43,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         shows the instruction encoding.
       </figcaption>
     </figure>
-    </p>
+
     <p>
     After graduating from college I had this persistent nagging feeling that building
     my own CPU from scratch (not just simulating one in Veriglog) would be a fun project
@@ -74,6 +74,8 @@ vim: ts=2 sts=2 sw=2 expandtab
     I envisioned the system having a common bus/backplane with nearly 80 pins. Each
     CPU component would be built on a separate prototype board and would plug into the
     backplane.
+    </p>
+
     <figure class='figure-container'>
       <iframe class='figure-container' src="https://docs.google.com/gview?url=https:%2F%2Fwirewrapodyssey.com/pdf/old_cpu.pdf&embedded=true" frameborder="0"></iframe>
       <figcaption class='figure-caption'>
@@ -81,20 +83,19 @@ vim: ts=2 sts=2 sw=2 expandtab
         Early 2005.
       </figcaption>
     </figure>
-    </p>
 
     <p>
     The basic idea at this stage was to break the whole CPU down into seven
     boards that would all connect to a common backplane.
     </p>
-    <p>
+
     <figure class='figure-container' style='width:400px;'>
       <img src="img/old_cpu_block.png">
       <figcaption class='figure-caption'>
         Block diagram for my first CPU attempt
       </figcaption>
     </figure>
-    </p>
+
     <p>
     I did a LOT of work on this attempt. I really thought I had a good design, and
     had broken things down in a way that it wouldn't be "boiling the ocean" to get
@@ -108,7 +109,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     quickly found that this would not scale to the large number of nets required
     for things like 16-bit bus wiring.
     </p>
-    <p>
+
     <figure class='figure-container'>
       <div style='overflow:auto'>
         <img src="img/old_clock_unit1.jpg" style='display:inline-block; margin-right:10px; max-width:49%'>
@@ -120,14 +121,14 @@ vim: ts=2 sts=2 sw=2 expandtab
         March 22, 2010
       </figcaption>
     </figure>
-    </p>
+
     <p>
     I tried many different designs for a backplane, and even experimented with etching
     my own PCBs (in 2010, there was no PCBWay offering $5 professionally printed PCBs).
     Eventually I found this really great prototyping board called BusBoard, and used
     it to create a slick backplane around DIN-41612 VME-style connectors.
     </p>
-    <p>
+
     <figure class='figure-container'>
       <div style='overflow:auto'>
         <img src="img/old_etched_backplane.jpg" style='display:inline-block; margin-right:10px; max-width:49%'>
@@ -140,7 +141,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         October 20, 2012
       </figcaption>
     </figure>
-    </p>
+
     <p>
     At this point I just couldn't keep up the motivation to work on the project. Etching
     my own PCBs was proving to be difficult and error prone. And doing most of the design work
@@ -192,7 +193,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     with breadboards, without introducing any additional prototyping complexity. It's absolutely
     crazy to me that wire wrapping has fallen out of favor in the maker/hacker community.  It's awesome!
     </p>
-    <p>
+
     <figure class='figure-container'>
       <div style='overflow:auto'>
         <img src="img/old_videocard1.webp" style='display:inline-block; margin-right:10px; max-width:49%'>
@@ -205,7 +206,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         September 2, 2019
       </figcaption>
     </figure>
-    </p>
+
     <p>
     Once I got the basic video card signaling working, that little bug in the back of my head
     started scratching again. I started imagining how I could hook this video card up to a
@@ -218,7 +219,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     for a proper video card for a new CPU design that I had not yet quite figured out, but was starting
     to see a vision come together.
     </p>
-    <p>
+
     <figure class='figure-container'>
       <iframe class='figure-container' src="https://docs.google.com/gview?url=https:%2F%2Fwirewrapodyssey.com/pdf/video_card.pdf&embedded=true" frameborder="0"></iframe>
       <figcaption class='figure-caption'>
@@ -226,7 +227,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         module. November 2, 2019
       </figcaption>
     </figure>
-    </p>
+
     <p>
     With the video card working, and a solid amount of experience under my belt, I was now ready
     to take on the CPU project that I had been thinking about for over a decade! Except instead of
@@ -267,7 +268,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     And that's when I hit the first major milestone, <a href="https://www.reddit.com/r/electronics/comments/hqijyg/never_been_so_happy_to_see_hello_world/">"Hello, World!"</a>
     </p>
 
-    <p>
+
     <figure class='figure-container'>
       <div style='overflow:auto'>
         <img src="img/hello_world1.jpeg" style='display:inline-block; margin-right:10px; max-width:49%'>
@@ -279,7 +280,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         HP 16500B logic analyzer for troubleshooting code execution. July 13, 2020
       </figcaption>
     </figure>
-    </p>
+
 
     <p>
     After basic execution was achieved, I tackled additonal components one at a time. I didn't have an
