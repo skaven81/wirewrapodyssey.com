@@ -1,0 +1,74 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Architecture: Transfer Registers
+  </div>
+  <div class='section-body'>
+    <h2>Architecture: Transfer Registers</h2>
+
+    <h3>Overview</h3>
+    <p>
+    There are three "transfer" registers in the Odyssey CPU, 
+    <tt class=register>TAL</tt>, and <tt class=register>TD</tt>.
+    These registers are not intended to be used by userspace programs directly;
+    the intended purpose of these registers is as a scratchpad for the microcode.
+    </p>
+    <p>
+    Since these registers are meant to be (and are) used by the microcode,
+    touching any of these registers in normal userspace programs can be
+    dangerous. For example, this instruction sequence is dangerous:
+    <code><pre>
+    LD_TD 0xdead    # load byte at 0xdead into TD register
+    JMP .location
+    NOP
+    .location
+    ST_TD 0xbeef    # write byte in TD to 0xbeef
+    </pre></code>
+    At first glance it all seems fine -- a byte will be loaded into
+    register, then we jump to another place in the code, where the byte in <tt class=register>TD</tt>
+    is written to some other address.
+    </p>
+    <p>
+    It is dangerous because the <tt>JMP</tt> instruction clobbers the the <tt class=register>TD</tt>
+    register:
+    <code><pre>
+    [0x20] JMP @addr
+    x 0 IncrementPC
+    # PC now points to high byte of target address
+    x 1 AddrBusPC WriteTD IncrementPC                     &lt;-- AIIEE!
+    # TD now contains high byte of target address and
+    # PC points to low byte of target address
+    x 2 AddrBusPC WritePCL
+    x 3 DataBusTD WritePCH
+    x 4 NextInstruction
+    </pre></code>
+    That means when the <tt>ST_TD</tt> instruction comes along, <tt class=register>TD</tt>
+    will contain the high byte of the target address of the <tt>JMP</tt>
+    instruction, not the value loaded in the <tt>LD_TD</tt> instruction.
+    </p>
+    
+    <h3>So why have opcodes that touch these registers?</h3>
+    <p>
+    One might similarly ask why John Carmack used the magic number <tt>0x5F3759DF</tt>
+    in his infamous <a href=https://en.wikipedia.org/wiki/Fast_inverse_square_root>fast
+    inverse square root</a> implementation, or why numerous Atari 2600 game developers
+    had to do obscene things with the limited hardware they were given. The answer is,
+    sometimes, it's OK (and even preferred) to use "dangerous" hardware features, if
+    it results in simpler code, or faster code, or something like that.
+    </p>
+    <p>
+    In the case of the Odyssey CPU, the transfer registers can be used safely if:
+    <ol>
+      <li>No opcodes that touch the transfer registers are used in between - this just means careful code design.</li>
+      <li>Interrupts are disabled for the code block using the transfer registers - not only does handling
+        an interrupt clobber the transfer registers, but code happening inside the interrupt handler
+        is likely to do the same.</li>
+    </ol>
+    </p>
+
+  </div>
+</body>
+</html>
