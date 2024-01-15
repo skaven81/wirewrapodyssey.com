@@ -1,0 +1,89 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Architecture: Stack Pointer
+  </div>
+  <div class='section-body'>
+    <h2>Architecture: Stack Pointer</h2>
+
+    <h3>Overview</h3>
+    <p>
+    A <a href=https://en.wikipedia.org/wiki/Stack_register>stack register</a> is a crucial
+    piece of hardware required so that a CPU can execute subroutine calls. When a program
+    requests to enter a subroutine, the CPU must have a way to store the return address,
+    and must do so in such a way that nested calls (e.g. subsequent subroutine calls while
+    already inside a subroutine) can be handled properly.
+    </p>
+    <p>
+    The Odyssey CPU implements a very simple stack architecture, with a single 8-bit <tt class=register>SP</tt>
+    register that is implemented with a pair of <tt>74x191</tt> 4-bit up/down counters.
+    Control of these counters is achieved with two control signals, resulting in four
+    possible states:
+    <ul>
+      <li><tt>SPSEL 00</tt> - do nothing</li>
+      <li><tt>SPSEL 01</tt> - do nothing</li>
+      <li><tt>SPSEL 10</tt> - increment <tt class=register>SP</tt></li>
+      <li><tt>SPSEL 11</tt> - decrement <tt class=register>SP</tt></li>
+    </ul>
+    There is also a <tt>/SPADDR</tt> control signal that when pulled low, presents the
+    <tt class=register>SP</tt> register to the low 8 bits of the address bus, and
+    a constant <tt>0xbf</tt> to the high 8 bits of the address bus.
+    </p>
+
+    <figure class='figure-container'>
+      <a href="photo/stack.png" target=_blank><img src="photo/stack_web.png"></a>
+      <figcaption class='figure-caption'>
+        Stack pointer implementation notes.
+        Click for fullsize in a new tab.
+      </figcaption>
+    </figure>
+
+    <h3>Usage</h3>
+    <p>
+    The Odyssey instruction set includes a number of opcodes that can <tt>PUSH</tt> or
+    <tt>POP</tt>, which directly manipulates the stack. There are also <tt>CALL</tt>
+    and <tt>RET</tt>, and <tt>IRQ</tt> and <tt>RETI</tt> opcodes, which use the stack
+    for its primary purpose of call tracking.
+    </p>
+    <p>
+    In typical usage, a program will issue a <tt>CALL</tt> to jump into a subroutine.
+    The subroutine will then <tt>PUSH</tt> registers onto the stack that it will be
+    using to perform its work. Before returning from the subroutine, it will <tt>POP</tt>
+    those registers back into place, and then issue <tt>RET</tt> to return to
+    the calling code.
+    </p>
+
+    <h3>Function Arguments</h3>
+    <p>
+    In some (most?) CPU architectures, the stack can be used to store arguments to a function.
+    This is not possible with the Odyssey CPU (at least not easily) as there is only the
+    single <tt class=register>SP</tt> register. If a caller pushes some arguments onto the
+    stack and then issues <tt>CALL</tt>, the called subroutine will find that the return
+    address is at the top of the stack, not the arguments to the function.
+    </p>
+    <p>
+    One way this is worked around in the Odyssey is to have many simple functions just use
+    registers directly for arguments. Typically a single-argument function will expect to
+    find the argument stored in the <tt class=register>AL</tt> register, with the returned
+    value often coming back in <tt class=register>AL</tt> as well.  This mechanism works
+    pretty well for functions that have a fixed and small argument list.
+    </p>
+    <p>
+    The other way this is worked around is by implementing a second stack <i>in software</i>,
+    which is called the "heap". Advanced functions that require a long or variable length
+    argument list can be coded to expect their arguments to be present on the heap, rather
+    than the stack. The caller uses functions from
+    <a href=https://github.com/skaven81/mycpu/blob/master/assembler/lib/heap.asm>heap.asm</a> 
+    to push arguments onto the heap, then issues a <tt>CALL</tt> to jump into the subroutine.
+    The subroutine uses heap functions to pop the arguments from the heap. Heap operations
+    do not impact the stack, and the FIFO nature of the heap also preserves the call stack
+    semantics. However, because all heap operations require callouts to subroutines, each
+    of which have a dozen or so instructions, heap operations are a lot slower than stack
+    operations.
+    </p>
+  </div>
+</body>
+</html>
