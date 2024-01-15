@@ -1,0 +1,328 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Architecture: Instruction Decoding
+  </div>
+  <div class='section-body'>
+    <h2>Architecture: Instruction Decoding</h2>
+
+    <h3>Overview</h3>
+    <p>
+    Probably the most important decision to make when desiging a from-scratch CPU is how instructions
+    will be formatted and decoded. There are two popular approaches: a RISC-like approach where there
+    is a fixed instruction size, and a CISC-like approach where instructions can have variable sizes.
+    Further, the decision of whether or not to use microcoding (which can be applied to both fixed and
+    variable instruction sizes) makes a huge impact on the rest of the design.
+    </p>
+
+    <h3>Design Considerations</h3>
+    <p>
+    When I first started working on building my own CPU, I was working from the experience I had in
+    college taking a computer architecture course. In that class, we worked through lab assignments
+    and a final project building a MIPS CPU, in both a single-cycle and pipelined variant (see the
+    <a href="javascript:show_content('history')">History</a> section for further details about this).
+    So my first approach was to copy what I did there, and came up with a MIPS-like fixed instruction
+    length where fields in the instruction directly fed into the CPU.
+    </p>
+
+    <figure class='figure-container'>
+      <a href="photo/old_cpu_instruction_arch.png" target=_blank><img src="photo/old_cpu_instruction_arch_web.png" style='display:inline-block; margin-right:10px; max-width:49%'></a>
+      <figcaption class='figure-caption'>
+        My first attempts at creating an instruction architecture.
+        Click for fullsize in a new tab.
+      </figcaption>
+    </figure>
+
+    <p>
+    My first attempts above attempted to optimize around a minimal instruction set, where most of the
+    control logic was embedded right into the instruction word. Instructions would all be completed
+    in a single clock cycle.
+    </p>
+
+    <p>
+    But as I worked through the rest of the architecture with this in mind, I continued to run into
+    limitations. What I thought was making the design simpler (fixed instruction length, single cycle
+    execution) was actually making it more complicated. The biggest complication was that for any
+    operation that had to move or use addresses (such as branching instructions), all 16 bits of
+    the address would have to be presented to the target register(s) simultaneously. This required
+    a bunch of extra buses in the CPU design that aren't a big deal when you design a CPU in Verilog,
+    but become quite onerous when actually wiring things up by hand.
+    </p>
+
+    <p>
+    At some point, I managed to break out of my mental block, and realized I could greatly simplify
+    the design, as well as enable new features over time, by leveraging microcoding. With some further
+    thought I came up with the following instruction format:
+    <p>
+
+    <table class="bit-table">
+    <tr>
+      <th>14</td>
+      <th>13</td>
+      <th>12</td>
+      <th>11</td>
+      <th>10</td>
+      <th>9</td>
+      <th>8</td>
+      <th>7</td>
+      <th>6</td>
+      <th>5</td>
+      <th>4</td>
+      <th>3</td>
+      <th>2</td>
+      <th>1</td>
+      <th>0</td>
+    </tr>
+    <tr>
+      <td colspan=8><tt>OPCODE</tt></td>
+      <td colspan=1><tt>O</tt></td>
+      <td colspan=1><tt>E</tt></td>
+      <td colspan=1><tt>Z</tt></td>
+      <td colspan=4><tt>SEQ</tt></td>
+  </table>
+
+  <p>
+  But wait! That's 15 bits, what a strange format! Also, what the heck kind of instruction format is that?
+  </p>
+
+  <p>
+  Let's walk through it.
+  </p>
+
+  <h4><tt>OPCODE</tt></h4>
+  <p>
+  The <tt>OPCODE</tt> is an 8-bit value, and defines the operation that will be executed with this instruction.
+  It's just a number from <tt>0x00</tt> to <tt>0xff</tt> and has no implicit meaning at all. Opcodes can be
+  given any ID at all, and this allows up to 256 instructions in the instruction set.
+  </p>
+
+  <h4><tt>O/E/Z</tt></h4>
+  <p>
+  These are the flags from the last ALU operation.
+  <ul>
+  <li><tt><b>O</b></tt> - Overflow: the last operation resulted in a carry-out/overflow</li>
+  <li><tt><b>E</b></tt> - Equal: the last operation's operands were equivalent (without regard to what the result of the operation was</li>
+  <li><tt><b>Z</b></tt> - Zero: the result of the last operation was zero</li>
+  </ul>
+  </p>
+
+  <h4><tt>SEQ</tt></h4>
+  <p>
+  <tt>SEQ</tt> is the opcode sequence counter. At the beginning of each new instruction, this is reset to
+  zero, and it counts up once per clock cycle.
+  </p>
+
+  <h3>Instruction Sequencing</h3>
+  <p>
+  And that brings us to how instructions are sequenced in the Odyssey CPU. Odyssey instructions are <i>microcoded</i>,
+  meaning that each instruction (represented by an 8-bit <tt>OPCODE</tt>) is actually a mini-program that executes up
+  to 16 <i>micro-ops</i> to get its job accomplished. Each clock cycle, the state of the 15-bit instruction register
+  changes. At a minimum, the <tt>SEQ</tt> portion counts up, but there may also be changes to the <tt>O/E/Z</tt> flags.
+  This state is fed into control logic so that given a certain 15-bit instruction register value, a certain set of
+  control signals is set up, which accomplishes the desired micro-op.
+  </p>
+  <p>
+  I designed it this way because it condenses the control logic down to what amounts to a memory lookup across a 32KiB
+  address space. So my "control logic" is just a series of <tt>AT28C256</tt> EEPROMs wired in parallel, with the 8 data
+  bits for each EEPROM serving as 8 control lines. I have four EEPROMs, for a total of 32 control lines. The advantage
+  of this approach is that all of the instruction sequencing and instruction set definition boils down to what gets written
+  into those four EEPROMs. So I can write software to generate the EEPROM images, and I can add new instructions, modify
+  the behavior of existing instructions, and even optimize execution, without having to touch a single physical wire on
+  the CPU.
+  </p>
+  <p>
+  Let's look at a few example opcodes to show how this works. You can learn more in the
+  <a href="javascript:show_content('sw-assembler');">Software</a> section, where
+  I get into the details of how I generate the control ROMs, which in turn influences
+  how the assembler writes out machine code.
+  </p>
+  
+  <h4>Example 1: <tt>NOP</tt></h4>
+  <code><pre>
+  [0x00] NOP
+  x 0 IncrementPC
+  x 1 NextInstruction
+  </pre></code>
+  <p>
+  The header indicates the opcode ID (<tt>[0x00]</tt>) and the opcode name (<tt>NOP</tt>).
+  Each line under the header has three columns. The first is the flags that match this row,
+  with <tt>x</tt> meaning "match any flags"). The second column is the sequence number in
+  hex, from <tt>0</tt> to <tt>f</tt>. And any remaining tokens on the line are macros that
+  say which control signals should be asserted (altered from their default state).
+  </p>
+  <p>
+  The <tt>NOP</tt> (no-operation) instruction does nothing but go to the next instruction.
+  So the first micro-op (<tt>0</tt>) asserts the appropriate control signals so that on
+  the next clock, the <a href="javascript:show_content('arch-pc');">program counter</a>
+  register will be incremented, pointing at the next instruction opcode address. The second
+  micro-op (<tt>1</tt>) asserts the appropriate control signals so that the program counter
+  register is presented to the address bus, which will cause the next opcode ID to be
+  present on the data bus. The <tt>NextInstruction</tt> macro also sets the control signals
+  that tell the <tt>OPCODE</tt> register to load data from the data bus, and to reset the
+  <tt>SEQ</tt> counter to zero on the next clock.
+  </p>
+
+  <h4>Example 2: <tt>ST</tt></h4>
+  <code><pre>
+  [0x10] ST @addr $data
+  x 0 IncrementPC
+  # PC now points to high byte of target address
+  x 1 AddrBusPC WriteTAH IncrementPC
+  x 2 AddrBusPC WriteTAL IncrementPC
+  # PC now points to data byte
+  x 3 AddrBusPC WriteTD IncrementPC
+  x 4 AddrBusTA DataBusTD WriteRAM
+  x 5 NextInstruction
+  </pre></code>
+  <p>
+  This is a good example of why micro-coded operation makes construction of the Odyssey CPU
+  so much easier. With a single-cycle CPU implementation, an instruction like <tt>ST</tt>
+  (store) requires that at least the address (16 bits) be present in the instruction itself,
+  so this would have to be a 24-bit instruction word (8 bit opcode plus 16 bit address) and
+  all the physical circuitry on the board would have to know what to do with that. And this
+  would likely be only one of several instruction formats, making the instruction decoding
+  that much more complex. But with a microcoded system like this, the address and the data
+  can just be embedded in the program as bytes after the opcode, and normal accesses to the
+  address and data bus can be used to move the data around.
+  </p>
+  <p>
+  Going through each micro-op:
+  <ul>
+    <li><tt>0</tt> - increment the <tt class=register>PC</tt> so it points at the next byte in the program (which
+        is the high byte of the target address)</li>
+    <li><tt>1</tt> - present the <tt class=register>PC</tt> to the address bus, which causes the program ROM to
+        put the byte at that address onto the data bus. Set the control line to have the
+        <tt class=register>TAH</tt> register update its value from the data bus. The <tt class=register>PC</tt>
+        is also incremented so it points at the next byte of the target address on the next clock.</li>
+    <li><tt>2</tt> - same as micro-op #1, but writes to the <tt class=register>TAL</tt> register.</li>
+    <li><tt>3</tt> - same as micro-ops #1 and #2, but this byte is written to the <tt class=register>TD</tt>
+        register.</li>
+    <li><tt>4</tt> - Now the actual "store" operation happens. The <tt class=register>TA</tt>
+        (<tt class=register>TAH</tt>+<tt class=register>TAL</tt>) is presented to the address bus, the
+        <tt class=register>TD</tt> register is presented to the data bus, and the <tt>WriteRAM</tt>
+        control signal is asserted, causing the value on the data bus to be written to RAM at the
+        given address.</li>
+    <li><tt>5</tt> - The <tt class=register>PC</tt> points at the next opcode already, so this micro-op causes
+        the <tt class=register>PC</tt> to be presented to the address bus, which has the program
+        ROM put the next opcode onto the data bus, and the new opcode is written to the <tt>OPCODE</tt>
+        register and the <tt>SEQ</tt> counter is reset, moving to the next instruction.</li>
+  </ul>
+  </p>
+
+  <h4>Example 3: <tt>JEQ</tt></h4>
+  <code><pre>
+  [0x21] JEQ @addr
+  x 0 IncrementPC
+  e 1 IncrementPC # skip over high @addr byte
+  e 2 IncrementPC # skip over low @addr byte
+  e 3 NextInstruction
+  # PC now points to high byte of target address
+  E 1 AddrBusPC WriteTD IncrementPC
+  # TD now contains high byte of target address and
+  # PC points to low byte of target address
+  E 2 AddrBusPC WritePCL
+  E 3 DataBusTD WritePCH
+  E 4 NextInstruction
+  </pre></code>
+  <p>
+  This is a good example of how conditional branching can be implemented using micro-op sequencing.
+  The <tt>JEQ</tt> instruction jumps to the given address, if the last ALU operation had both
+  operands equal. There are actually two distinct sequences encoded here, that depend on the
+  state of the <tt>E</tt> flag. The lines with <tt>e</tt> (lowercase) are used if <tt>E</tt> is
+  clear, and the lines with <tt>E</tt> (uppercase) are used if <tt>E</tt> is set.
+  </p>
+  <p>
+  Let's look at the sequence if <tt>E</tt> is clear:
+  <ul>
+    <li><tt>x 0</tt> - increment the <tt class=register>PC</tt> so it points at the next byte in the program (which
+        is the high byte of the jump address)</li>
+    <li><tt>e 1</tt> - we are not jumping, so just move to the next byte</li>
+    <li><tt>e 2</tt> - we are not jumping, so just move to the next byte, which is the next opcode</li>
+    <li><tt>e 3</tt> - load the next opcode from the <tt class=register>PC</tt> address and reset the sequence counter</li>
+  </ul>
+  </p>
+  <p>
+  And the sequence if <tt>E</tt> is set:
+  <ul>
+    <li><tt>x 0</tt> - increment the <tt class=register>PC</tt> so it points at the next byte in the program (which
+        is the high byte of the jump address)</li>
+    <li><tt>E 1</tt> - load the high byte of the target address into the <tt class=register>TD</tt> register, and move the <tt class=register>PC</tt> to the next byte.</li>
+    <li><tt>E 2</tt> - load the low byte of the target address into the <tt class=register>PCL</tt> register, from the address in <tt class=register>PC</tt>.</li>
+    <li><tt>E 3</tt> - load the high byte of the target address into <tt class=register>PCH</tt> by copying it out of <tt class=register>TD</tt>.</li>
+    <li><tt>E 4</tt> - load the next opcode from the (now updated) <tt class=register>PC</tt> address and reset the sequence counter</li>
+  </ul>
+  </p>
+
+  <h3>Pros/Cons of this approach</h3>
+  <h4>Pros</h4>
+  <ul>
+    <li><b>Just in time construction.</b> With this architecture, I was able to start writing
+      functional code very quickly, and with an incomplete CPU. My first functional program was
+      simply a series of <tt>ST</tt> and <tt>NOP</tt> operations to write some static data
+      into the video card's character memory region, resulting in my first "Hello, World!".
+      This was possible with just the <tt class=register>PC</tt>, <tt class=register>TA</tt>
+      and <tt class=register>TD</tt> registers implemented, and only a handful of control signals
+      defined. I was able to fully validate that the CPU was functional up to this point, before
+      moving on to adding more features. This would not have been possible (or at least would
+      have been a lot more difficult) with a traditional CISC approach of using the bits in
+      the instruction itself to control things like which registers are used in the operation.
+      </li>
+    <li><b>Timing can be controlled in firmware.</b> When I inevitably land in a situation where
+      I'm bumping up against timing constraints, e.g. where reading or writing a value is taking
+      longer than one clock cycle, I can implement custom instructions that include duplicate
+      micro-ops, so the CPU state remains stable over multiple clock ticks, working around
+      the critical path issue without slowing down other operations.</li>
+    <li><b>SIMD instructions.</b> I have found that some tight loops (such as those required
+      to clear or scroll the display) were able to benefit greatly from a rudimentary form of
+      SIMD (single instruction, multiple data). Since each opcode can run up to sixteen micro-ops,
+      I can avoid the overhead of the <tt>NextInstruction</tt> step, and make my assembly code
+      tidier, by unrolling tight loops into fixed-length operations where 4-8 of the steps
+      are perfomed in microcode rather than in explicit instructions. See the <tt>MEMCPY*</tt>
+      and <tt>MEMFILL*</tt> opcodes near the bottom of 
+      <a href=https://github.com/skaven81/mycpu/blob/master/assembler/gen_opcodes.sh>gen_opcodes.sh</a>.
+      </li>
+  </ul>
+  <h4>Cons</h4>
+  <ul>
+    <li><b>Opcode sprawl.</b> Since the opcodes are just labels, with no physical connection to
+      the intent of the operation, every possible combination of source/destination registers
+      has to be enumerated as a separate opcode. So instead of traditional instruction sets that
+      define an operation like <tt>MOV</tt> and two parameters (source, destination register),
+      the Odyssey instruction set instead has a sprawl of instructions:
+      <code><pre>
+      [0xb0] MOV_CH_AH [0xb1] MOV_CH_AL [0xb2] MOV_CH_BH [0xb3] MOV_CH_BL [0xb4] MOV_CH_TAL [0xb5] MOV_CH_TD
+      [0xb6] MOV_CL_AH [0xb7] MOV_CL_AL [0xb8] MOV_CL_BH [0xb9] MOV_CL_BL [0xba] MOV_CL_TAL [0xbb] MOV_CL_TD
+      [0xbc] MOV_DH_AH [0xbd] MOV_DH_AL [0xbe] MOV_DH_BH [0xbf] MOV_DH_BL [0xc0] MOV_DH_TAL [0xc1] MOV_DH_TD
+      [0xc2] MOV_DL_AH [0xc3] MOV_DL_AL [0xc4] MOV_DL_BH [0xc5] MOV_DL_BL [0xc6] MOV_DL_TAL [0xc7] MOV_DL_TD
+      </pre></code>
+      The opcode labels are written such that the resulting assembly is pretty easy to read, so
+      this tends to not be that big of a problem.  But it does mean that the 256 opcodes available
+      get used up very quickly, and so some instructions I've had to limit to just certain registers
+      because I simply started running out of opcodes.
+      </li>
+    <li><b>ALUOP confusion.</b> One thing not discussed in this section, is how the ALU operations
+      are implemented. Because the opcode itself doesn't encode any usable control data, the ALU
+      operations are all implemented with special <tt>ALUOP*</tt> opcodes, each of which has the
+      actual ALU operation written into the following byte. This means that instructions that
+      pull data out of the <tt class=register>A</tt> or <tt class=register>B</tt> registers, are
+      hidden behind <tt>ALUOP</tt> opcodes, even if the resulting behavior would be better written
+      as some other operation. For example, note the list of <tt>MOV</tt> instructions above. None
+      of them copy data <i>out</i> of the <tt class=register>A</tt> or <tt class=register>B</tt>
+      registers. To perform the equivalent of <tt>MOV_AH_BL</tt>, I instead have to use an
+      <tt>ALUOP</tt> instruction, <tt>ALUOP_BL %A%+%AH%</tt>. This also means that instructions
+      that conceptually should be the same (such as <tt>MOV</tt>) no matter which registers are
+      involved, can actually take more clock cycles (and more program memory) if using the 
+      <tt class=register>A</tt> or <tt class=register>B</tt> registers than the
+      <tt class=register>C</tt> or <tt class=register>D</tt> registers. Some of all this confusion
+      could be worked around with an additional layer of abstraction in the assembler, so these
+      implementation details are simply handled by the assembler, which could use a more standard
+      language instead of just being a thin veneer over the machine code as it is today.
+      </li>
+  </ul>
+
+  </div>
+</body>
+</html>
