@@ -11,7 +11,127 @@ vim: ts=2 sts=2 sw=2 expandtab
 
     <h3>Overview</h3>
     <p>
+    When I first started working on a homebrew CPU design, I naturally gravitated toward
+    the <a href=https://en.wikipedia.org/wiki/74181><tt>74181</tt></a> ALU, as it was already
+    there, could be combined to build an arbitrary-size ALU, and even had support chips like
+    the <tt>74381</tt> and <tt>74382</tt> that can generate the generate, propagate, and carry
+    signals for high performance operation. There are plenty of computers out there that used
+    the <tt>74181</tt>, including the legendary <a href=https://en.wikipedia.org/wiki/Xerox_Alto#Architecture>
+    Xerox Alto</a>. If it was good enough for Xerox PARC, it should be good enough for me!
     </p>
+
+    <p>
+    But upon further inspection, I started to second guess this idea. Looking closely at
+    the datasheet, have a look at the function table:
+    </p>
+
+    <figure class='figure-container'>
+      <img src="img/74181_functions.png">
+    </figure>
+
+    <p>
+    Only a handful of these functions are actually useful. Most of them are just side effects
+    of the internal logic. Plus there's no right shift operation (just a left shift). I'm sure
+    that the wizards at Xerox had no trouble pressing most of these operations into useful
+    service in the Alto OS, but I wanted something a bit more approachable. I also wanted to
+    have a few custom ALU operations that would make manipulating colors in the video card
+    easier.
+    </p>
+
+    <h3>EEPROM-based sliced ALU</h3>
+    <p>
+    With that in mind, I decided to build my own ALU. Yep. I built one myself. Though I will
+    admit that the approach I took was a bit like cheating, as it's really just an extension
+    of the same approach I used for instruction decoding. I used a pair of <tt>AT28C256</tt>
+    EEPROMs as giant lookup tables, each implementing a 4-bit slice of an ALU. Each ALU ROM
+    accepts input via the address pins like so:
+    </p>
+    <table class="bit-table">
+      <tr>
+        <th>14</td>
+        <th>13</td>
+        <th>12</td>
+        <th>11</td>
+        <th>10</td>
+        <th>9</td>
+        <th>8</td>
+        <th>7</td>
+        <th>6</td>
+        <th>5</td>
+        <th>4</td>
+        <th>3</td>
+        <th>2</td>
+        <th>1</td>
+        <th>0</td>
+      </tr>
+      <tr>
+        <td colspan=5><tt>ALUOP</tt></td>
+        <td colspan=1><tt>Cin-MSB</tt></td>
+        <td colspan=1><tt>Cin-LSB</tt></td>
+        <td colspan=4><tt>A</tt></td>
+        <td colspan=4><tt>B</tt></td>
+      </tr>
+    </table>
+    <p>
+    Like the control logic, the functional concept is that each 4-bit ALU can be entirely
+    described by simply iterating through all possible combinations of the 15 input bits.
+    I wrote a Python program that does just this, enumerating all possible input states
+    and generating the requisite output bits, which are organized as such:
+    </p>
+    <table class="bit-table">
+      <tr>
+        <th>7</td>
+        <th>6</td>
+        <th>5</td>
+        <th>4</td>
+        <th>3</td>
+        <th>2</td>
+        <th>1</td>
+        <th>0</td>
+      </tr>
+      <tr>
+        <td colspan=1><tt>Z</tt></td>
+        <td colspan=1><tt>E</tt></td>
+        <td colspan=1><tt>Cout-MSB</tt></td>
+        <td colspan=1><tt>Cout-LSB</tt></td>
+        <td colspan=4><tt>OUT</tt></td>
+      </tr>
+    </table>
+    <p>
+    By accepting carry-in bits on both the high side and low side of each 4-bit slice,
+    as well as outputting carry-out bits on both the high and low side, the ALU slices
+    can be combined to perform 8-bit operations like left <b>and</b> right shifts. The
+    "high" ALU can also be programmed subtly differently from the "low" ALU to accommodate
+    things like "arithmetic" shifts that ignore the most significant bit, and special
+    hard-coded bit set/reset/toggle operations that are only meant to affect the highest
+    two bits.
+    </p>
+
+    <p>
+    Plumbing the two ALU slices together looks like this, from my notes:
+    </p>
+
+    <figure class='figure-container'>
+      <a href="photo/alu_notes.png" target=_blank><img src="photo/alu_notes_web.png"></a>
+      <figcaption class='figure-caption'>
+        Notes for ALU implementation. Left: the A and B register data path. Right: how the
+        4-bit ALU slices are wired together.
+        Click for fullsize in a new tab.
+      </figcaption>
+    </figure>
+
+    <p>
+    The <tt>O</tt> (overflow) status is just wired to the high ALU's <tt>Cout-MSB</tt> pin.
+    The <tt>E</tt> (equal) status is the AND of both ALU's equal pins.
+    The <tt>Z</tt> (zero) status is the AND of both ALU's zero pins.
+    </p>
+
+    <h3>ALU generation software</h3>
+    <p>
+    You can read more about how the ALU is generated and tested with software, in the
+    <a href='javascript:show_content("sw-alu");'>software</a> section.
+    </p>
+
   </div>
 </body>
 </html>
