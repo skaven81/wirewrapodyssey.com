@@ -214,13 +214,18 @@ vim: ts=2 sts=2 sw=2 expandtab
         instruction, because any ALU operation when in this state only affects the primary/low
         set of flags.
         </li>
-      <li><b>IRQ return</b> - <tt>IRQMASK=0</tt> (interrupts are re-enabled) and <tt>STRES=1</tt>
+      <li><b>IRQ return</b> - <tt>IRQMASK=1</tt> (interrupts are disabled) and <tt>STRES=1</tt>
         (the <tt>RETI</tt> instruction is the only one that sets this control signal): When returning
         from an interrupt handler, <tt>RETI</tt> marks the end of the handler. If <tt>IRQMASK=0</tt>
         and <tt>STRES=1</tt>, the status flags in bits 7, 6, 5 are copied to bits 2, 1, 0 in the
         status register, thus restoring the status flags from before the interrupt handler executed.
         </li>
     </ul>
+    The fourth state, <tt>IRQMASK=0 + STRES=1</tt> should never happen, as the <tt>STRES</tt> control
+    signal is only asserted in the <tt>RETI</tt> opcode, which should only ever be executed as part
+    of an interrupt vector (which would have been started by the <tt>IRQ</tt> opcode, which sets
+    <tt>IRQMASK=1</tt>). If somehow this state is achieved, ALU operations write their status flags
+    to the backup/high side of the status register, not the primary/low side.
     </p>
   </div>
 </body>
