@@ -1,0 +1,131 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Peripherals: Keyboard
+  </div>
+  <div class='section-body'>
+    <h2>Peripherals: Keyboard</h2>
+
+    <h3>Overview</h3>
+    <p>
+    The keyboard peripheral is one of the places I took some liberties with the "all 7400-series
+    logic" design element of the Odyssey computer (the other is in using a fancy dual-port RAM
+    for main memory). When I considered how I wanted to handle keyboard input, I started by watching
+    Ben Eater's video series where he <a href="https://www.youtube.com/watch?v=7aXbh9VUB3U" target=_blank>
+    interfaces with a PS/2 keyboard using simple shift registers</a>, and then later <a href="https://www.youtube.com/watch?v=w1SB9Ry8_Jg">
+    builds interface hardware for a 6502 CPU</a> for a PS/2 keyboard. These videos, and some
+    Google searches here and there, familiarized me sufficiently with the PS/2 protocol that
+    I was able to get started.
+    </p>
+    <p>
+    One of the key things I found, was that when you press the <tt>a</tt> key on your keyboard,
+    the <i>scancode</i> sent by the keyboard, doesn't have any relation to the ASCII 'a' character.
+    There are also extended scancodes and all sorts of funky internal state to track. Further,
+    the PS/2 protocol is bi-directional: the host computer is actually responsible for turning
+    the numlock, capslock, and scroll lock LEDs on and off.
+    </p>
+    <p>
+    I was thus faced with a challenge. If I went the Ben Eater route and interfaced a keyboard
+    directly to the Odyssey CPU, my interrupt handler would need to do all of this translation
+    between scancodes and ASCII codes, as well as handle the difference between make and break
+    events, and also know how to deal with capslock and shift! Not only would it be a substantial
+    amount of complex code to write in Odyssey assembler, it would also be rather long (especially
+    the giant case statement to translate scancodes into ASCII values).
+    </p>
+    <p>
+    So I decided to offload all of this work to the peripheral itself. The "keyboard peripheral"
+    would talk to the PS/2 keyboard on its own, and handle all the make/break events and read
+    all the scancodes. The peripheral would handle setting the LEDs, handling shifting and capslock,
+    and translating scancodes to ASCII characters. The Odyssey CPU would just see a couple 8-bit
+    registers: one containing an ASCII character, and the other containing eight flags indicating
+    whether the shift, control, alt, or other special keys were currently held down. The flags
+    register also says whether the keystroke was a make (key press) or break (key release).
+    </p>
+
+    <h3>Keyboard controller implementation</h3>
+    <p>
+    I decided to put the whole keyboard controller into an ATTiny85 microcontroller, which is
+    a miniscule 8-pin device with 5 volt I/O pins. This is just enough I/O, as PS/2 interface
+    needs two, output to a pair of shift registers takes two more, and another output is needed
+    to signal an interrupt.  That's five GPIO pins, with the sixth pin being the microcontroller's
+    reset input, and then of course ground and Vcc to round out the eight pins.
+    </p>
+
+    <figure class='figure-container'>
+      <a href="photo/kb_notes.png" target=_blank><img src="photo/kb_notes_web.png"></a>
+      <figcaption class='figure-caption'>
+        Notes showing how the keyboard controller is implemented.
+      </figcaption>
+    </figure>
+
+    <p>
+    I used the Arduino bootloader to ease development, and you can find the source code
+    <a href="https://github.com/skaven81/mycpu/blob/master/keyboard_controller_attiny/keyboard_controller_attiny.ino" target=_blank>
+    here</a>. With some research, I found that modern PS/2 keyboards can support three different
+    scancode sets. Scancode set 3, the most recent one, is the simplest, with every key on a
+    typical 104-key keyboard represented with a single eight bit scancode. This is opposed to
+    the more complex set 1 and 2, which have many keys that send multiple scancodes, and use
+    a funky "extended scancode" marker, which requires the controller to track state over time.
+    </p>
+    <p>
+    On boot, the ATTiny85 initializes the attached PS/2 keyboard by sending it a reset command,
+    then puts the keyboard into PS/2 mode 3 (so it begins sending scancodes from scancode set 3).
+    It then does some useful configuration like making sure typematic mode is disabled on keys
+    like shift and control. It sets the keyboard LEDs and then begins watching the PS/2 port
+    for keypresses.
+    </p>
+    <p>
+    When a key is pressed (or released) on the keyboard, the scancode is read in by the ATTiny85,
+    and appropriate action is taken. For special keys like capslock and numlock, all that
+    happens is that the internal state of the program gets updated and the LEDs get updated
+    to reflect the new state. For normal keys, the scancode is 
+    <a href="https://github.com/skaven81/mycpu/blob/master/keyboard_controller_attiny/scancode_to_ascii.h" target=_blank>
+    translated to an ASCII code</a> and then the ASCII code, plus the current set of flags,
+    is shifted out to a pair of '595 shift registers. Once shifting is complete, the controller
+    pulses an IRQ request line low. A <tt>/S/R</tt> latch is used outside the controller to
+    make the IRQ signal stay low; it is reset by the address decoder, so that when address
+    <tt>0xc00x</tt> appears on the address bus, the IRQ is cleared.
+    </p>
+
+    <h3>Keyboard to CPU interface</h3>
+    <p>
+    The keyboard controller handles all the complexity of talking to the keyboard and handling
+    the PS/2 scancodes. The CPU can read from two registers:
+    <ul>
+      <li><tt>0xc000</tt> - ASCII code for the last keystroke (or <tt>0x00</tt> for make/break events on control keys</li>
+      <li><tt>0xc001</tt> - Keyboard flags:
+      <ul>
+        <li><tt>0x01</tt>0=make, 1=break</li>
+        <li><tt>0x02</tt>CTRL pressed</li>
+        <li><tt>0x04</tt>ALT pressed</li>
+        <li><tt>0x08</tt>F-key pressed (if this flag is set, the 0-9/!/@ in the key register indicates which F-key was pressed)</li>
+        <li><tt>0x10</tt>SHIFT pressed</li>
+        <li><tt>0x20</tt>NUMLOCK is active</li>
+        <li><tt>0x40</tt>CAPSLOCK is active</li>
+        <li><tt>0x80</tt>SCROLLOCK is active</li>
+      </ul>
+    </ul>
+    </p>
+    <p>
+    When a keystroke (or key release) occurs, the keyboard controller will pulse the
+    <tt>/CPU_INT</tt> signal low (see the diagram above). This causes the <tt>/S/R</tt>
+    latch to pull the <tt>/IRQ1</tt> signal low, and hold it there.  When the CPU accesses
+    either the flags or keystroke register, the <tt>/S/R</tt> latch is reset, which
+    allows the <tt>/IRQ1</tt> signal to return high.
+    </p>
+
+    <h3>Keyboard interrupt handler</h3>
+    <p>
+    When the OS wants the keyboard to become active, it can set the IRQ1 handler to
+    the <a href="https://github.com/skaven81/mycpu/blob/master/assembler/lib/keyboard.asm#L55" target=_blank>
+    <tt>:kb_irq_buf</tt></a> function. This function takes each keystroke and appends
+    it to a buffer. Programs can use access functions to read from the buffer to read
+    in keystrokes. This way keystrokes can be processed even if the CPU is busy doing
+    other things, and extra keystrokes will be buffered until the program can read them.
+    </p>
+  </div>
+</body>
+</html>
