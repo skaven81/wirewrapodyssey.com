@@ -11,6 +11,216 @@ vim: ts=2 sts=2 sw=2 expandtab
 
     <h3>Overview</h3>
     <p>
+    The ability to handle interrupts is a crucial feature that separates "toy"
+    CPUs from "usable" ones. Let's look at the simplest example of keyboard
+    or serial input. Without interrupts, the CPU must constantly poll the keyboard
+    hardware to see if a new keystroke is available for processing, and if so,
+    branch to a block of code that can retrieve the keystroke and process it.
+    But who knows what programs might be doing at any given time on the CPU?
+    What if the CPU is busy doing some intense computation that is going to
+    take several hundred milliseconds to complete? Or what if the author of the
+    currently-running program didn't include the code to poll the keyboard?
+    Then it's possible that keystrokes may be missed, or even if not missed,
+    there may be an unacceptable latency between keystrokes and something
+    happening onscreen.
+    </p>
+    <p>
+    But with interrupts, the software doesn't have to know or care at all what
+    is happening with the keyboard or UART or any other devices. It can just
+    do its normal work. In the event that the user strikes a key, or a new
+    byte arrives on the serial interface, the device just flags an interrupt,
+    and the normal flow of program execution is <i>interrupted</i> and the
+    interrupt <i>handler</i> takes care of servicing the device (in the case
+    of a serial or keyboard input, the incoming byte is likely appended to
+    a buffer so the hardware is free to receive the next byte).  Then control
+    is returned back to the original program, which continues completely unaware
+    that it was even interrupted.
+    </p>
+    <p>
+    Another good use case for handling interrupts is a timer. Say you are writing
+    a game, and need the play field and/or player sprites to update at a predictable
+    speed, perhaps 25 updates per second (once every 40ms). Without interrupts,
+    you would need to know the CPU's clock speed, and the number of clock ticks
+    that every instruction requires, and do laborious work to make sure every code
+    path taken during every update, takes nearly exactly 40ms. Much of that time
+    would likely be spent in a "stall" loop just waiting for the next frame to
+    be rendered.
+    </p>
+    <p>
+    But with a CPU that can handle interrupts, and timer hardware that can generate
+    an interrupt regularly, the code becomes far more manageable. Just write the
+    "screen refresh" code as an interrupt handler, and set the timer interrupt to
+    fire every 40ms. Now the game will run at a consistent 25fps regardless of the
+    CPU's clock speed, and there is no more need to insert specialized delay loops.
+    </p>
+
+    <h3>The Odyssey Interrupt System</h3>
+    <p>
+    Older CPUs like the 8086 and Z80 have a single interrupt pin: external hardware
+    is required for the CPU to be able to accept multiple interrupts, and the operating
+    system needs to be programmed to know how to differentiate between different
+    interrupt sources.
+    </p>
+    <p>
+    The Odyssey CPU takes a similar approach. There is one main <tt>IRQOP</tt> control
+    signal, which if asserted, causes the CPU to load opcode <tt>0xEE</tt> (IRQ) instead
+    of whatever opcode is currently referenced at the program counter location.
+    </p>
+    <p>
+    To handle multiple interrupts, a <tt>74x148</tt> priority encoder is used. This chip
+    is sort of like an 8-to-3 multiplexer, but having multiple inputs asserted simultaneously
+    is valid. The priority encoder will set the 3 output bits in a predictable way, such
+    that if multiple inputs are asserted, the one with the highest priority appears on
+    the outputs.
+    </p>
+    <p>
+    The priority encoder allows for up to eight devices to asynchronously assert an
+    IRQ signal, and the <tt>74x148</tt> even conveniently has a single output pin that
+    is asserted if any of the inputs are asserted -- this gets wired directly to the
+    CPU's <tt>IRQOP</tt> control signal.  The three encoded priority lines are made
+    available on the data bus via another control signal, so that the <tt>IRQOP</tt>
+    instruction is able to determine which of the eight IRQs it is handling (and thus
+    runs the correct handler code).
+    </p>
+
+    <figure class='figure-container'>
+      <a href="photo/irq_arch.png" target=_blank><img src="photo/irq_arch_web.png"></a>
+      <figcaption class='figure-caption'>
+        My notes showing how the interrupt handler circuitry works.
+      </figcaption>
+    </figure>
+
+    <p>
+    Once an interrupt is asserted, the microcode for the <tt>0xEE</tt> (IRQ) opcode
+    takes care of actually handling the interrupt:
+    </p>
+
+    <code><pre>
+    [0xee] IRQ
+    # PC is still pointing at our return address, as
+    # the 0xee op was forced in instead of the intended
+    # next instruction.
+    x 0 MaskInterrupts IncrementSP
+    # Write PC to stack
+    x 1 AddrBusSP DataBusPCL WriteRAM IncrementSP
+    x 2 AddrBusSP DataBusPCH WriteRAM IncrementSP
+    # Save D register to stack
+    x 3 AddrBusSP DataBusDH WriteRAM IncrementSP
+    x 4 AddrBusSP DataBusDL WriteRAM
+    # Load IRQ vec constant to DH
+    x 5 DataBusIrqBase WriteDH
+    # Load IRQ ID (shifted left one) to DL
+    x 6 DataBusIrqId WriteDL
+    # Load RAM@D into PC
+    x 7 AddrBusD WritePCH
+    x 8 IncrementD
+    x 9 AddrBusD WritePCL
+    # Pop D from stack
+    x a AddrBusSP WriteDL DecrementSP
+    x b AddrBusSP WriteDH DecrementSP
+    # Execute referenced instruction
+    x c NextInstruction
+    </pre></code>
+
+    <p>
+    And at the end of the interrupt handler, a special <tt>RETI</tt> instruction
+    is provided to return from the interrupt handler:
+    </p>
+
+    <code><pre>
+    [0x03] RETI
+    x 0 AddrBusSP WritePCH DecrementSP UnmaskInterrupts
+    x 1 AddrBusSP WritePCL DecrementSP RestoreStatusFlags WriteStatus
+    x 2 NextInstruction
+    </pre></code>
+
+    <h3>Interrupt vectors</h3>
+    <p>
+    Observe in the <tt>IRQ</tt> listing above, that micro-op 5 loads a constant into <tt class=register>DH</tt>.
+    This constant is <tt>0x5f</tt>. Then micro-op 6 loads the IRQ ID into <tt class=register>DL</tt>.
+    The IRQ ID is just the three bits coming from the priority encoder, wired up to bits 3, 2, and 1 of the
+    data bus. Bits 7, 6, 5, 4, and 0 are all zero. So if <tt>IRQ0</tt> is asserted, the priority encoder
+    output will be <tt>0b000</tt> and the resulting value in <tt class=register>D</tt> will be <tt>0x5f00</tt>.
+    If <tt>IRQ1</tt> is asserted, the priority encoder output will be <tt>0b001</tt> and the resulting value
+    in <tt class=register>D</tt> will be <tt>0x5f02</tt> (because the IRQ ID is shifted left one bit). This
+    results in the following table of addresses that are loaded into <tt class=register>D</tt> for each interrupt
+    line:
+    <ul>
+      <li><tt>IRQ0 - 0x5f00</tt></li>
+      <li><tt>IRQ1 - 0x5f02</tt></li>
+      <li><tt>IRQ2 - 0x5f04</tt></li>
+      <li><tt>IRQ3 - 0x5f06</tt></li>
+      <li><tt>IRQ4 - 0x5f08</tt></li>
+      <li><tt>IRQ5 - 0x5f0a</tt></li>
+      <li><tt>IRQ6 - 0x5f0c</tt></li>
+      <li><tt>IRQ7 - 0x5f0e</tt></li>
+    </ul>
+    The data at <tt class=register>D</tt> is loaded into <tt class=register>PCH</tt> and then <tt class=register>D</tt>
+    is incremented. The byte at that address is then loaded into <tt class=register>PCL</tt>. The opcode
+    at <tt class=register>PC</tt> is then loaded and execution continues.
+    </p>
+    <p>
+    The result of this mechanism is that there are eight separate interrupt vectors configurable in the
+    Odyssey CPU. When the keyboard controller requests an interrupt (IRQ1), the CPU will jump to whatever
+    subroutine is referenced at <tt>0x5f02-0x5f03</tt>. This can be (and is) an entirely different handler
+    from the timer (IRQ3).
+    </p>
+
+    <h3>Masking interrupts</h3>
+    <p>
+    It is not safe to come out of reset with interrupts enabled, because if any of the interrupt lines
+    are asserted, the CPU will attempt to handle the interrupt, before the handler addresses have been
+    installed at <tt>0x5f00-0x5f0f</tt>. It is also a good idea to prevent interrupts from firing while
+    the CPU is busy handling an interrupt - it allows for interrupt handling code to be simpler and safer.
+    </p>
+    <p>
+    Two control signals, <tt>MASKINT</tt> and <tt>UMASKINT</tt>, are wired to a J-K flip-flop, so that
+    micro-ops in <tt>IRQ</tt>, <tt>RETI</tt>, <tt>MASKINT</tt> and <tt>UMASKINT</tt> opcodes are able to
+    set and reset the <tt>IRQMASK</tt> control signal in software. When interrupts are masked, the
+    instruction handling circuitry is blocked from loading the <tt>0xee</tt> IRQ opcode, even if the
+    <tt>IRQOP</tt> control signal is asserted.
+    </p>
+
+    <h3>Returning safely from interrupt handler</h3>
+    <p>
+    When I first built the interrupt handling circuitry as described above, I found shortly afterward
+    that my software started failing in really weird ways. After some painstaking debugging with
+    the logic analyzer, I discovered that the problem was with returning from the interrupt handler
+    safely. Here's the unsafe series of events that caused the problem:
+    <ol>
+      <li>ALU opcode executes, sets status flags</li>
+      <li>IRQ opcode executes, as IRQ was requested during previous instruction</li>
+      <li>During interrupt handler, some other ALU opcode was executed, changing the status flags</li>
+      <li>Return from interrupt handler</li>
+      <li>Branch instruction executes, expecting status flags to be set from ALU opcode in #1, but instead finds status flags from #3</li>
+    </ol>
+    I needed a way to preserve the status flags during interrupt handler execution, and restore
+    them during the <tt>RETI</tt> instruction.
+    </p>
+    <p>
+    My solution to this was a bit of a hack, but it works. In the notes above, notice the hand-drawn
+    logic in the lower-right. This is the status flag preservation system.
+    <ul>
+      <li><b>Normal operation</b> - <tt>IRQMASK=0</tt> (interrupts are enabled) and <tt>STRES=0</tt>
+        (not in <tt>RETI</tt> instruction): When ALU operations write the status register, the flags
+        are written to both sides of the status register (bits 7, 6, and 5 are the "backup" status bits).
+        </li>
+      <li><b>IRQ handling</b> - <tt>IRQMASK=1</tt> (interrupts are disabled) and <tt>STRES=0</tt>
+        (not in <tt>RETI</tt> instruction): When interrupts are disabled (which is typically when
+        inside an interrupt handler, but it's OK when it happens during normal code where <tt>MASKINT</tt>
+        instruction is executed): When ALU operations write the status register, the flags are only
+        written to the primary/low side (bits 2, 1, 0). The backup/high side (bits 7, 6, 5) are
+        left alone. This has the effect of preserving the status bits upon entering the <tt>IRQ</tt>
+        instruction, because any ALU operation when in this state only affects the primary/low
+        set of flags.
+        </li>
+      <li><b>IRQ return</b> - <tt>IRQMASK=0</tt> (interrupts are re-enabled) and <tt>STRES=1</tt>
+        (the <tt>RETI</tt> instruction is the only one that sets this control signal): When returning
+        from an interrupt handler, <tt>RETI</tt> marks the end of the handler. If <tt>IRQMASK=0</tt>
+        and <tt>STRES=1</tt>, the status flags in bits 7, 6, 5 are copied to bits 2, 1, 0 in the
+        status register, thus restoring the status flags from before the interrupt handler executed.
+        </li>
+    </ul>
     </p>
   </div>
 </body>
