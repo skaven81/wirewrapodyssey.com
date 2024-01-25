@@ -98,14 +98,14 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li><tt>0xc000</tt> - ASCII code for the last keystroke (or <tt>0x00</tt> for make/break events on control keys</li>
       <li><tt>0xc001</tt> - Keyboard flags:
       <ul>
-        <li><tt>0x01</tt>0=make, 1=break</li>
-        <li><tt>0x02</tt>CTRL pressed</li>
-        <li><tt>0x04</tt>ALT pressed</li>
-        <li><tt>0x08</tt>F-key pressed (if this flag is set, the 0-9/!/@ in the key register indicates which F-key was pressed)</li>
-        <li><tt>0x10</tt>SHIFT pressed</li>
-        <li><tt>0x20</tt>NUMLOCK is active</li>
-        <li><tt>0x40</tt>CAPSLOCK is active</li>
-        <li><tt>0x80</tt>SCROLLOCK is active</li>
+        <li><tt>0x01</tt> - 0=make, 1=break</li>
+        <li><tt>0x02</tt> - CTRL pressed</li>
+        <li><tt>0x04</tt> - ALT pressed</li>
+        <li><tt>0x08</tt> - F-key pressed (if this flag is set, the 0-9/!/@ in the key register indicates which F-key was pressed)</li>
+        <li><tt>0x10</tt> - SHIFT pressed</li>
+        <li><tt>0x20</tt> - NUMLOCK is active</li>
+        <li><tt>0x40</tt> - CAPSLOCK is active</li>
+        <li><tt>0x80</tt> - SCROLLOCK is active</li>
       </ul>
     </ul>
     </p>
@@ -122,8 +122,9 @@ vim: ts=2 sts=2 sw=2 expandtab
     When the OS wants the keyboard to become active, it can set the IRQ1 handler to
     the <a href="https://github.com/skaven81/mycpu/blob/master/assembler/lib/keyboard.asm#L55" target=_blank>
     <tt>:kb_irq_buf</tt></a> function. This function takes each keystroke and appends
-    it to a buffer. Programs can use access functions to read from the buffer to read
-    in keystrokes. This way keystrokes can be processed even if the CPU is busy doing
+    it to a buffer. Programs can use access functions (<a href="https://github.com/skaven81/mycpu/blob/master/assembler/lib/keyboard.asm#L81"><tt>:kb_bufsize</tt></a>
+    and <a href="https://github.com/skaven81/mycpu/blob/master/assembler/lib/keyboard.asm#L94"><tt>:kb_readbuf</tt></a>)
+    to read from the buffer. This way keystrokes can be processed even if the CPU is busy doing
     other things, and extra keystrokes will be buffered until the program can read them.
     </p>
   </div>
