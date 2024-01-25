@@ -1,0 +1,86 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Peripherals: RTC &amp; Timer
+  </div>
+  <div class='section-body'>
+    <h2>Peripherals: RTC &amp; Timer</h2>
+
+    <h3>Overview</h3>
+    <p>
+    The real time clock (RTC) and timer functions are a staple of most computers, especially those
+    of the 8-bit and 16-bit era. And the vast majority of those computers used the venerable
+    Dallas DS12887 RTC chip. The Wire Wrap Odyssey includes a modern version of that chip, the
+    <a href="https://www.analog.com/media/en/technical-documentation/data-sheets/ds1501-ds1511.pdf">
+    Maxim DS1511Y</a>. It has some modern amenities that the DS12887 does not, such as an internal
+    integrated 32.767kHz crystal, a watchdog timer, and 256 bytes of battery-backed SRAM.
+    </p>
+
+    <h3>Why add an RTC &amp; timer?</h3>
+    <p>
+    There are three key functionalities enabled by adding the DS1511Y to the Odyssey:
+    <ol>
+      <li>256 bytes of battery-backed SRAM to store settings/options across reboots</li>
+      <li>Clock stuff - read out the time and date, and measure the passage of time without having to count clock ticks</li>
+      <li>Generate interrupts at defined, precise intervals</li>
+    </ol>
+    #3 is of the most direct use, particularly when programming something like a game.
+    I can set the RTC to generate an interrupt as often as every 10 milliseconds. So for
+    example I can set it for a 33 millisecond interval and every time the interrupt fires,
+    redraw the screen and move the player sprites one time step. It doesn't matter what
+    the CPU clock speed is, the sprites will always move at the desired speed across
+    the screen.
+    </p>
+
+    <h3>Interfacing to the DS1511Y</h3>
+    <p>
+    Like most 8-bit-friendly peripheral chips, the DS1511Y interfaces with a host CPU
+    with a set of address pins (5 address bits in this case), and 8 data pins connected
+    to the data bus. It has chip select, output enable, and write enable pins just like a RAM.
+    And so it's interfaced with the system by allocating it some address space and using
+    some simple glue logic to do address decoding
+    </p>
+
+    <figure class='figure-container'>
+      <a href="photo/rtc_arch.png" target=_blank><img src="photo/rtc_arch_web.png"></a>
+      <figcaption class='figure-caption'>
+        Notes showing how the DS1511Y is implemented.
+      </figcaption>
+    </figure>
+
+    <p>
+    The address decoding ensures that the DS1511Y is selected (<tt>/CS</tt> goes low) when
+    the address is in the <tt>0xc080-0xc0ff</tt> range.  The lowest five address pins are
+    wired directly to the chip, so addresses <tt>0xc080-0xc09f</tt> are mapped to the chip's
+    <tt>0x00-0x1f</tt> addresses. As a result, manipulating the DS1511Y from code is
+    simple, just read and write to specific memory addresses.
+    </p>
+
+    <h3>Timer interrupts</h3>
+    <p>
+    I wrote a <a href="https://github.com/skaven81/mycpu/blob/master/assembler/lib/timer.asm">library</a>
+    that allows easy access to the DS1511Y's interrupt functionality. Like most peripheral
+    devices that can generate an interrupt, the interrupt is cleared when reading one of the
+    control registers (control register A in this case). To test this behavior out, I implemented
+    a <tt>:sleep</tt> function in the library. All it has to do is:
+    <ul>
+      <li>write 0 to <tt class=register>AL</tt></li>
+      <li>set the IRQ3 vector to a function that writes 1 to the <tt class=register>AL</tt> register and reads the control register to clear the interrupt</li>
+      <li>Write the appropriate control registers to enable the timer for the requested amount of time</li>
+      <li>Go into a tight loop waiting for <tt class=register>AL</tt> to be non-zero</li>
+    </ul>
+    A similar approach can be taken to refresh the display in a game context. The game code
+    can point the IRQ3 vector to a fuction that performs the display refresh, and clears the
+    IRQ. The timer can be configured to reset and go again once it generates an interrupt (versus
+    the <tt>:sleep</tt> function which performs a "one-shot" interrupt). Each time the timer
+    fires, the display refresh function will execute, perfectly on time. The main game code
+    can break out of this behavior by updating the timer control register to disable the
+    timer interrupts, and restore the IRQ3 vector to a no-op function that just clears the
+    interrupt.
+    </p>
+  </div>
+</body>
+</html>
