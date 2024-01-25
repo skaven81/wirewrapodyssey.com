@@ -1,0 +1,119 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Peripherals: RS232 UART
+  </div>
+  <div class='section-body'>
+    <h2>Peripherals: RS232 UART</h2>
+
+    <h3>Overview</h3>
+    <p>
+    Up until this point, everything I had built for the Wire Wrap Odyssey computer was
+    static. All the programming is flashed to an EEPROM and all the software can do
+    is interact with the user via the keyboard and display. No data can move into or
+    out of the system programmatically. I needed a serial port to enable data transfers
+    to and from the system.
+    </p>
+    <p>
+    To implement the UART, my first thought was to use the popular 16550 UART. It is
+    highly capable, has on-board 16-bit FIFO buffer, and is basically the gold standard
+    of hobbyist UARTs. But it's a physically HUGE chip - a big 40 pin "hershey bar"
+    DIP chip. And at the time I was implementing the UART, I was nearly out of board
+    space. I could fit the 16550, but there would be no room for the glue logic or the
+    RS232 level shifting chip and its supporting passives.
+    </p>
+    <p>
+    So I looked around and eventually settled on the much older <a href="https://www.renesas.com/us/en/document/dst/82c52-datasheet">82C52</a>.
+    The 82C52 was originally designed to pair with the Intel 8086 CPU, and such
+    has some quirks, such as expecting you to have an 82C59 programmable interrupt
+    controller and 82C84 clock generator handy. These were a standard part of any
+    8086/8088 chipset. But the Wire Wrap Odyssey doesn't have them!
+    </p>
+
+    <h3>Interfacing with the 80C52</h3>
+    <p>
+    Fortunately, most of the quirks could be ignored. The Odyssey has several interrupt
+    inputs, while the 8086/8088 only had one. So I didn't need a programmable interrupt
+    controller. And the clock generation could be handled by an external crystal. The
+    only remaining weirdness is that instead of a single <tt>/WRITE</tt> pin (which
+    implies "read" when high), there are <i>separate</i> <tt>/READ</tt> and <tt>/WRITE</tt>
+    pins. This meant some somewhat clever glue logic was needed to translate my single
+    <tt>/WRAM</tt> signal coming from the CPU, into the right signals at the right times.
+    Here's what I came up with:
+    </p>
+
+    <figure class='figure-container'>
+      <a href="photo/uart_arch.png" target=_blank><img src="photo/uart_arch_web.png"></a>
+      <figcaption class='figure-caption'>
+        Notes showing how the UART implemented.
+      </figcaption>
+    </figure>
+
+    <p>
+    An 8-input OR/NOR gate (<tt>74x4078</tt>) decodes the top 8 bits of the address,
+    generating a signal when the address in the <tt>0xc100-0xc1ff</tt> range. This is
+    ANDed with the inverted clock signal and then further NANDed with normal and
+    inverted versions of <tt>/WRAM</tt> to generate the <tt>/RD</tt> and <tt>/WR</tt>
+    signals.
+    </p>
+    <p>
+    Other than the weird <tt>/RD</tt>and <tt>/WR</tt> signals, everything else is
+    pretty standard: two address pins, eight data pins, and a bunch of pins for
+    the serial interface, which are wired up to a <tt>MAX202</tt> RS232 level shifter.
+    </p>
+    <div class=tip-container>
+    I made the mistake when first implementing the UART, thinking that the serial
+    pins on the 80C52 could be wired directly to the 9-pin serial port. But the
+    signals coming out of the 80C52 are NOT RS232, the're just TTL levels, and
+    actually inverted from the RS232 signals. The <tt>MAX202</tt> takes the TTL
+    signals (<tt>0v = 0/space, 5v = 1/mark</tt>) and converts them to RS232 signals
+    (<tt>+3 to +15v = space, -15 to -3v = mark</tt>). If you're integrating
+    a UART into your project and expect to use a standard 9 or 25 pin computer serial port
+    to communicate with it, you need to have an RS232 level shifter.
+    </div>
+
+    <h3>Software support</h3>
+    <p>
+    Interfacing with the UART is much the same as with any other memory-mapped
+    peripheral. Just read and write memory addresses that are mapped to the device.
+    The 80C52 can be a bit finnicky though, and it took me quite some time to
+    get all the sequencing right. So naturally I abstracted the functionality
+    into a <a href=https://github.com/skaven81/mycpu/blob/master/assembler/lib/uart.asm>library</a>.
+    The library contains some helpful functions to make interfacing with the
+    UART easier:
+    <ul>
+      <li><tt>:uart_init_&lt;baud&gt;</tt> - resets and initializes the UART to a particular speed</li>
+      <li><tt>:uart_sendchar</tt> - writes the character in <tt class=register>AL</tt> to the UART and blocks until it has finished sending the character</li>
+      <li><tt>:uart_irq_dr_buf</tt> - used as an interrupt handler for IRQ5, when a byte is received by
+                the UART, this handler retrieves the byte and shifts it into a buffer for later retrieval.
+                This ensures that the UART is able to immediately receive the next byte. The 80C52 only
+                has one byte of buffer - if the CPU doesn't read the byte immediately, it can be overwritten
+                by the next incoming byte.</li>
+      <li><tt>:uart_bufsize</tt>, <tt>:uart_readbuf</tt> - reads from the buffer</li>
+    </ul>
+    </p>
+
+    <div class=tip-container>
+    The 82C52 is a stickler for the modem control signals. When it is sending a character, it will wait
+    patiently (forever) waiting for the <tt>/CTS</tt> (clear to send) signal to be asserted from the
+    remote terminal. If you are building your own RS232 interface, make sure the terminal program
+    you are using (and the USB-to-serial adapter you are using) is following the strict RTS/CTS signaling
+    protocol. I am able to get things working by using GTKTerm and configuring the serial device for
+    the appropriate baud rate, word length, parity bits, and stop bits, and no flow control. To remind
+    myself of how to configure the remote terminal, <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/20-cmd_console.asm>
+    I put some notes at the top of the source code for the VT220 console program</a>.
+    </div>
+
+    <p>
+    I have been able to write a serial interface "terminal" program that makes
+    the Odyssey behave (sort of) like a VT220 virtual terminal. I am able to
+    connect to my Linux laptop over an RS232 cable, log in, and use the more
+    modern computer over the serial connection
+    </p>
+
+  </div>
+</body>
+</html>
