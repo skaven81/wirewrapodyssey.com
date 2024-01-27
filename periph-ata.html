@@ -1,0 +1,62 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Peripherals: ATA Port
+  </div>
+  <div class='section-body'>
+    <h2>Peripherals: ATA Port</h2>
+
+    <h3>Overview</h3>
+    <p>
+    The final (for now, at least) peripheral I plan to add to the Odyssey computer is
+    an ATA (AT Attachment) port, sometimes called an IDE (integrated drive electronics)
+    port. You know, the 40-pin port that you'd hook a hard drive to in 286, 386, 486,
+    Slot 1/A, and Socket 7 systems.
+    </p>
+    <p>
+    It sounds impossibly complex at first -- normally the ATA/IDE port on a PC motherboard
+    was handled by a VLSI southbridge chip. But the ATA protocol is actually very simple,
+    if used in its earliest and simplest PIO (programmed I/O) mode, instead of the faster
+    (but much more complex) DMA (direct memory access) mode.
+    </p>
+    <p>
+    I found <a href=https://blog.retroleum.co.uk/electronics-articles/an-8-bit-ide-interface/>
+    this excellent blog post</a> detailing how the ATA/IDE connector is wired, and how data
+    is moved across it. It's actually quite simple, and behaves like most memory-mapped
+    peripherals do. There's three address pins (and thus eight control registers) and
+    sixteen data pins, and the usual chip select, read, and write pins. Communicating with
+    an IDE device over the ATA bus simply requires writing the appropriate values to
+    control registers (which reside in the IDE drive), then sending a command (which is
+    just writing to one of the control registers).
+    </p>
+    <p>
+    There are two key challenges for making this work with the Odyssey CPU. The first is
+    that the Odyssey only has an 8-bit data bus, while the ATA bus is sixteen bits wide.
+    This can be addressed by having an 8-bit register that is written before writing
+    the actual command. The register can then provide the upper 8 bits of the data. The
+    same process can be used when reading: each read puts the high 8 bits into the register,
+    and the low 8 bits onto the data bus. The CPU can then read from the register to
+    grab the high 8 bits. The second challenge is timing. In the blog post, the author
+    was interfacing an IDE device to a Z80 CPU, which resulted in some Z80-specific
+    glue logic. I'll have to come up with Odyssey-specific logic to ensure that the
+    timing requirements are met. I may also need to add some custom opcodes that hold
+    the data and address lines for extra clock cycles to ensure all the timing works right.
+    </p>
+
+    <h3>Implementation: in progress!</h3>
+    <p>
+    I haven't started actually desiging or building the ATA port yet. When I do, the plan
+    is to use an SD-to-IDE adapter as the primary disk drive for the Odyssey. But since
+    all IDE drives (at least, those that support PIO-0 mode) should work, in theory I could
+    hook up an old IDE hard drive, or even a CD-ROM to the port and have it work. That
+    would be a fun experiment! And the ATA port allows for two drives on the same bus,
+    so I actually could have both removable media (an SD card or CD-ROM) and fixed media
+    (an IDE hard drive) both working simultaneously! 
+    </p>
+
+  </div>
+</body>
+</html>
