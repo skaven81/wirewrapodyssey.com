@@ -1,0 +1,173 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Construction
+  </div>
+  <div class='section-body'>
+    <h2>Wire Wrap Construction</h2>
+    <p>
+    The Odyssey computer is built entirely on Augat wire wrap prototyping boards.
+    </p>
+    <figure class='figure-container'>
+      <a href="photo/wirewrap2.jpg" target=_blank><img src="photo/wirewrap2_web.jpg"></a>
+      <figcaption class='figure-caption'>
+      Detailed view of Odyssey wire wrap posts.
+      </figcaption>
+    </figure>
+
+    <h3>Why wire wrap?</h3>
+    <p>
+    To answer this, let's look at why <i>not</i> some of the alternatives.
+    </p>
+    <h4>Breadboards</h4>
+    <p>
+    Breadboards are inexpensive and very accessible. All the wiring is on the
+    top side, so it's easier to get the wiring right, particuarly when prototyping.
+    And with custom-cut solid core wire and some clever wire routing, bread board
+    designs can be quite elegant and reasonably simple to maintain.
+    <a href=https://austinmorlan.com/posts/8bit_breadboard/>Here's a good example
+    of an 8-bit CPU on a breadboard</a>. It doesn't look too bad.
+    </p>
+    <p>
+    However, there are lots of downsides with breadboards for a project like
+    this, that relegates breadboard-based designs to the "toy" category.
+    <ul>
+      <li>Breadboards have very low component density. Look at the photos in the
+      link above. the whole computer is nearly as large as the Odyssey, but only
+      has around 50 chips. By comparison, the Odyssey has nearly 150 chips! Wire
+      wrap prototyping boards are 2-4x denser than breadboards.</li>
+      <li>Breadboards have a lot of parasitic capacitance. This severely limits
+      signaling speeds, and thus clockspeed. Breadboard CPUs tend to run well
+      under 1MHz clock speeds to stay stable. Wire wrap prototyping boards have
+      solid power and ground planes and high quality pin connections. Decoupling
+      capacitors are easy to bind to a nearby ground. The Odyssey runs just
+      fine at nearly 3MHz, and is limited mostly by signal propagation than
+      parasitic capacitance.</li>
+      <li>The connections on a breadboard are spring-fit and do not hold the
+      wires particularly tightly. Working on a breadboard with lots of wires
+      can often cause some wires to get inadvertently pulled out. Additionally,
+      corrosion can cause poor connections, especially in the cheaper breadboards
+      that don't have gold plated terminals. Wire wrap, on the other hand, is
+      incredibly reliable. According to <a href=https://en.wikipedia.org/wiki/Wire_wrap>
+      Wikipedia</a>, <i>Wire wrap construction can produce assemblies that are
+      more reliable than printed circuits: connections are less prone to fail
+      due to vibration or physical stresses on the base board, and the lack of
+      solder eliminates soldering faults such as corrosion, cold joints and dry
+      joints. The connections themselves are firmer and have lower electrical
+      resistance due to cold welding of the wire to the terminal post at the
+      corners.</i>
+    </ul>
+    </p>
+
+    <h4>Printed Circuit Boards</h4>
+    <p>
+    PCBs is how all the cool kids are prototyping these days. With shops like
+    PCBWay able to turn out professionally printed circuit boards for just a
+    few tens of dollars, it makes perfect sense to take advantage of the reliability,
+    speed, and quality of a PCB when building a big complex project like this.
+    So why did I use wire wrap instead?
+    </p>
+    <p>
+    Well, the biggest disadvantage (for me, at least) with using PCBs is that
+    everything has to be designed upfront. The whole computer has to be designed
+    and laid out using CAD software, then sent off to the PCB shop, and then
+    the boards come back and get assembled and tested. It's <i>efficient</i>,
+    but for me, it doesn't sound like a lot of fun. Since I built the Odyssey
+    as a hobby project, I didn't want to have to worry about having everything
+    all decided up front. I had a lot more fun just throwing chips onto a board
+    and hacking on it for a weekend to get an idea to work (or not). That's
+    not possible with PCB design.
+    </p>
+
+    <h4>Perfboard / Stripboard</h4>
+    <p>
+    This approach seems like the best balance between durability/reliability and
+    "hack it together" fun of prototyping. And in fact I was so convinced of that
+    when I first started building the Odyssey, that this is precisely what I did.
+    I purchased plated perfboards and would spend hours soldering 30 gauge wires
+    point to point on the back of the board to implement an idea.
+    </p>
+    <p>
+    This works fine for small projects. But as the complexity grew, it became
+    increasingly daunting to have to solder all these wires. And when soldering,
+    any pins that have mutliple wires attached become extremely difficult to
+    deal with, as every time you melt the solder, the other wire(s) want to move
+    around.
+    </p>
+    <p>
+    It turns out that our forebears already solved this problem with wire wrap
+    prototyping. It solves the durability/reliability problem while retaining
+    the density of a PCB or perfboard construction. And multiple nets are easy
+    to attach to a single wire wrap pin without disturbing existing wiring. It's
+    even relatively easy to make repairs -- often it's just a matter of cutting
+    out the offending wire (leaving the dead wraps on either end) and wrapping
+    a new wire to fix it. The posts are tall and can accommodate a few mistakes.
+    </p>
+
+    <h3>Wire Wrap Supplies</h3>
+    <h4>Prototyping boards</h4>
+    <p>
+    I gravitated toward professional wire wrap prototyping boards. These were
+    likely hideously expensive when they were originally made and used in the
+    1970s and 1980s. But these days you can pick them up on eBay for 50-200
+    dollars. That might sound like a lot compared to a bunch of breadboards, but
+    note that it's a LOT more prototyping space than a breadboard, and the finished
+    product will be a lot more reliable.
+    </p>
+    <p>
+    On eBay, I find that searching "augat prototyping board" brings up good
+    matches. Augat is a brand name of prototyping board. There are others, but
+    Augat seems to have the best quality boards that I've found.
+    </p>
+    <p>
+    Prototyping boards will typically have columns of wire wrap posts set
+    0.3" apart (the standard width of a DIP chip), with 50 pins in each column.
+    There will be a power plane on one side and a ground plane on the other,
+    with wire wrap posts set every 8-10 pins. Most prototyping boards have
+    some kind of external interface -- I'm sure many were designed to plug into
+    a big backplane.
+    </p>
+
+    <h4>Wire wrapping wire</h4>
+    <p>
+    I have used many different types of wire wrapping wire, but the best by far
+    is 30 gauge Kynar insulated wire. All the big shops like Jameco, Mouser,
+    Digikey, etc. sell it. Just search for "Kynar" and filter to 30 gauge wire.
+    </p>
+
+    <h4>Wire wrapping tools</h4>
+    <p>
+    The pros back in the day would use a wire wrapping gun <a href=https://www.specialized.net/tools/wire-wrap-tools/wire-wrap-guns.html>
+    like this</a>. I probably should have picked one of these up early on, but
+    instead I've gotten along well with <a href=https://www.amazon.com/JAMECO-BENCHPRO-30AWG-Wire-Wrap/dp/B00C9NWR1Q>one of these</a>.
+    </p>
+    <p>
+    I also use a 30 gauge wire stripper, a tiny flathead screwdriver I use for
+    pushing wires around on the board, and a good pair of tweezers.
+    </p>
+
+    <h3>Wire Wrap Technique</h3>
+    <p>
+    This is probably best taught via a YouTube video. Bil Herd has a great
+    introduction that he did for Hackaday:
+    <iframe width="560" height="315"
+            src="https://www.youtube.com/embed/IXvEDM-m9CE?si=O_lsnXBogFcAnZ1k"
+            title="YouTube video player" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+    </iframe>
+    </p>
+    <p>
+    Personally, the only tip I can really think of is to not apply too much pressure
+    on the wrapping tool. Only the slightest pressure (barely more than the weight of the
+    tool itself) should be applied to the pin when spinning the tool to wrap the pin.
+    If you apply too much pressure, it causes overwrap, which is not only ugly, it can
+    also lead to broken bits of wire falling off and causing shorts in the project.
+    </p>
+
+  </div>
+</body>
+</html>
