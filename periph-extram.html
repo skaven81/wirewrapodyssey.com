@@ -1,0 +1,163 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Peripherals: 1MB Extended RAM
+  </div>
+  <div class='section-body'>
+    <h2>Peripherals: 1MB Extended RAM</h2>
+
+    <h3>Overview</h3>
+    <p>
+    The primary RAM for the Odyssey computer is a Renesas 7007 32KiB dual-port static RAM.
+    8KiB of that address space is dedicated to the video card framebuffer, and 4KiB is tied
+    up in various hard-coded memory regions such as the stack, heap, and keyboard and UART
+    buffers. That only leaves 20KiB for programs to use. Once loading programs from removable
+    media (or over serial) is implemented, that 20KiB also has to store the program being
+    executed as well as the RAM that it needs to run. Obviously it's possible to do amazing
+    things with less -- the Atari 2600 only had 128 bytes of RAM and 4KiB of ROM on the
+    cartridge. The first TRS-80 had just 4KiB of RAM.
+    </p>
+    <p>
+    But I'm not in the business of...well...business. I am not trying to keep BoM costs down
+    so I can sell a computer at an affordable price. And therefore it's not really in my
+    interest to spend a bunch of time doing hardcore optimization of my software to cram
+    it all into a 20KiB memory footprint.
+    </p>
+    <p>
+    And thus, I decided I wanted to have enough RAM to be able to code up whatever I wanted,
+    without the need for crazy memory management tricks. Any time an algorithm can be
+    made simpler by trading complexity or speed for RAM -- I should just use more RAM.
+    For an eight bit system with a 64KiB total address space, 1MiB of RAM should be more
+    than enough.
+    </p>
+
+    <h3>Implementation</h3>
+    <p>
+    The approach I decided to take for the extended RAM is similar to many CPUs of the
+    8-bit era. Rather than have the CPU address the whole available memory space directly,
+    a "window" is provided to the extended RAM. In my case, I decided to provide two
+    windows, one at <tt>0xd000-0xdfff</tt>, and another at <tt>0xe000-0xefff</tt>. Each
+    of these 4KiB windows consume 12 bits of address space. If I bolt on an additional
+    8 bits of address, well that's 20 bits, or 1MiB of addressable memory.
+    </p>
+    <p>
+    There are two 8-bit extended memory window registers. The one providing the "D" window
+    is accessed at <tt>0xc200</tt>, and the one providing the "E" window is accessed at
+    <tt>0xc201</tt>. With an 8-bit value set in each of these registers, memory accesses
+    to the <tt>0xdnnn</tt> simply concatenate the 8-bit window value with the lowest
+    twelve bits of the CPU address bus. The resulting 20 bit address is fed to the RAM.
+    </p>
+
+    <figure class='figure-container'>
+      <a href="photo/extram_arch.png" target=_blank><img src="photo/extram_arch_web.png"></a>
+      <figcaption class='figure-caption'>
+        Schematic of the extended RAM glue logic. Click for fullsize.
+      </figcaption>
+    </figure>
+
+    <p>
+    As you can see in the schematic above, while the concept sounds simple enough, actually
+    implementing it took a lot more glue logic than I expected.
+    </p>
+
+    <h3>D/E Window Registers</h3>
+    <p>
+    Let's start with the D/E window registers. These are implemented as a pair of <tt>74x377</tt>
+    8-bit D flip flops. The address decoder at the top of the page (the big 8-input NOR gate)
+    generates a signal when the top eight bits of the address are <tt>0xc2</tt>. The least significant
+    address line is then used to select between the D and E window register. So actually, any
+    even address between <tt>0xc200-0xc2ff</tt> maps to the D window register, and any odd address
+    maps to the E window register. The '377s are wired to the data bus so that when a write to
+    that address writes the correct '377 by pulling the correct <tt>/WE</tt> pin low.
+    </p>
+    <p>
+    The two window registers can be read as well, via the two <tt>74x245</tt> bus transceivers
+    shown at the bottom of the page, as well as the two OR gates above them. If the CPU is reading
+    <tt>0xc2nn</tt>, one of <tt>/SEGD_RD</tt> or <tt>/SEGE_RD</tt> will be pulled low, putting
+    the correct window register's value on the data bus.
+    </p>
+
+    <h3>Extended RAM interface</h3>
+    <p>
+    With the window registers sorted, another address decoder is needed to see when the CPU is
+    reading or writing in the <tt>0xdnnn</tt> or <tt>0xennn</tt> address space. The two NAND gates
+    in the middle left accomplish this, generating <tt>/ADDR_D</tt> and <tt>/ADDR_E</tt> signals.
+    These then go into an AND gate to generate a composite <tt>/ADDR_DE</tt> signal. These
+    signals, along with a few more bits of glue logic, feed a pair of <tt>74x257</tt> 4-bit 2-to-1
+    multiplexers. When the address bus is in the <tt>0xdnnn</tt> range, the D window register
+    is on the outputs of the multiplexer. And when the address bus is in the <tt>0xennn</tt> range,
+    the E window register is on the outputs of the multiplexer. We now have the top eight bits
+    of our address, and the address bus provides the lower twelve bits.
+    </p>
+    <p>
+    But here it gets complicated again! The extended RAM is not a single 1MiB chip. It's a pair
+    of 512KiB chips (<tt>AS6C4008</tt> to be precise). These are standard RAM devices, with a
+    19 bit address bus, and the usual set of <tt>/CE</tt>, <tt>/OE</tt> and <tt>/WE</tt> pins.
+    The 20th address bit can be used as a toggle between the two RAM chips, with a little glue
+    logic.
+    </p>
+    <p>
+    The <tt>/CE</tt> (chip enable) is asserted on <i>both</i> RAMs any time a read or write
+    is happening in the <tt>0xdnnn</tt> or <tt>0xennn</tt> range. For reads (when the CPU's
+    <tt>/WRAM</tt> is high) the 19-bit address is fed into both RAMs and the right chip's
+    <tt>/OE</tt> (output enable) is pulled low based on the value of the 20th address bit.
+    For writes, <tt>/WE</tt> (write enable) is pulled low on the right chip based on the
+    value of the 20th address bit.
+    </p>
+
+    <h3>Fixing some timing glitches</h3>
+    <p>
+    When I first implemented the extended RAM, it would not work reliably and in fact caused the
+    whole computer to become unstable when plugged in. Some troubleshooting with my logic
+    analyzer in timing mode, showed that any time the address bus was in the extended RAM
+    window (which could happen a lot during transitions from low address values back to an
+    idle address bus at <tt>0xffff</tt>), the <tt>/OE</tt> pin on one of the RAMs would get
+    pulled low for a moment. This would cause contention on the data bus.
+    </p>
+    <p>
+    The fix was to add an OR gate that prevents the <tt>/OE</tt> pin from being pulled low
+    until the back half of the clock cycle. That's the hand-drawn <tt>/OE_OK</tt> signal
+    I added in there. This ensures that when a new opcode is presented, that the address
+    bus is given half a clock cycle to stabilize, before allowing <tt>/OE</tt> to be
+    asserted on either RAM. A similar construct was already in place for the <tt>/WE</tt>
+    pin, because the RAM's timing requirements dictate that <tt>/CE</tt> must be low
+    and <tt>/OE</tt> must be high, before <tt>/WE</tt> is pulled low to initiate a write
+    cycle. Also, it is important that the address and data buses be stable before pulling
+    <tt>/WE</tt> low.
+    </p>
+    <p>
+    This is one of those situations where having a two phase clock would have come in handy,
+    as I could have used the phasing to delay the <tt>/OE</tt> and <tt>/WE</tt> transitions
+    to nearly the end of the clock cycle and thus increase the overall clock speed. But
+    for now, this solution works for up to around 2MHz or so. I could get a little more
+    speed by replacing the <tt>74HC</tt> chips that do address decoding, with <tt>74A</tt>
+    series chips, which have MUCH faster propagation delay.
+    </p>
+
+    <h3>Software</h3>
+    <p>
+    It was important to me that I be able to verify that all the 1MiB of RAM was properly
+    accessible, and that I didn't have any glitches like a mis-wired address pin that
+    would cause the wrong RAM chip to be written or read for a given address. To that
+    end, I did some research on how RAM testers do this, and wrote a
+    <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/20-cmd_memtest.asm>
+    shell command</a> that runs a comprehensive memory test. It uses the tried-and-true method
+    of reading and writing <tt>0x55</tt> and <tt>0xaa</tt> values to each address, to check
+    for any stuck bits or mis-wired data lines. It then runs a check of the window logic,
+    by writing the window ID (<tt>0x00-0xff)</tt>) to the first and last byte of each page.
+    These are then read back in the other window (e.g. write to D window, read back from E window)
+    to make sure that both windows are operating correctly.
+    </p>
+    <p>
+    Fortunately, the memory tests all seem to come back fine. I added a faster version
+    of the test to the <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/00-main.asm#L61>
+    boot sequence</a>, which helps to ensure all the interconnect cables are firmly seated
+    when booting the system. It's also fun to watch 1024KiB of RAM get checked during boot,
+    it's reminisicent of my old 8088, 386, and 486 PCs booting up.
+    </p>
+  </div>
+</body>
+</html>
