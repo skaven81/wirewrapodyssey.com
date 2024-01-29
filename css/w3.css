@@ -268,3 +268,5 @@ hr{border:0;border-top:1px solid #eee;margin:20px 0}
 .bit-table {border-collapse:collapse;}
 .bit-table th, td {border:1px solid black; width:25px; text-align:center; padding:0;}
 .bit-table th {background-color:#ccc; font-weight:bold;}
+
+.nowrap-table td {white-space:nowrap;}

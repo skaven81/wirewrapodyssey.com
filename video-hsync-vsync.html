@@ -1,0 +1,203 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Video Card: Hsync &amp; Vsync Generation
+  </div>
+  <div class='section-body'>
+    <h2>Video Card: Hsync &amp; Vsync Generation</h2>
+
+    <h3>Overview</h3>
+    <p>
+    In this section I'll discuss how the video card generates the Hsync and Vsync signals. These signals are
+    the only ones the monitor uses to determine the the resolution and refresh rate. The approach used to
+    generate these signals is identical to <a href="https://eater.net/vga">Ben Eater's breadboard video card</a>.
+    </p>
+
+    <p>
+    Here's the timing requirements, from <a href=http://tinyvga.com/vga-timing/640x480@60Hz">TinyVGA.com</a>,
+    reproduced here:
+    </p>
+
+    <h4>General timing</h4>
+    <table border=1 class="nowrap-table">
+      <tr>
+        <td>Screen refresh rate</td>
+        <td>60 Hz</td>
+      </tr>
+      <tr>
+        <td>Vertical refresh</td>
+        <td>31.46875 kHz</td>
+      </tr>
+      <tr>
+        <td>Pixel freq.</td>
+        <td>25.175 MHz</td>
+      </tr>
+    </table>
+    <h4>Horizontal timing (line)</h4>
+    <table border=1 class="nowrap-table">
+      <tr>
+        <td>Scanline part</td>
+        <td>Pixels</td>
+        <td>Time [&micro;s]</td>
+      </tr>
+      <tr>
+        <td>Visible area</td>
+        <td>640</td>
+        <td align=right>25.422045680238</td>
+      </tr>
+      <tr>
+        <td>Front porch</td>
+        <td>16</td>
+        <td align=right>0.63555114200596</td>
+      </tr>
+      <tr>
+        <td>Sync pulse</td>
+        <td>96</td>
+        <td align=right>3.8133068520357</td>
+      </tr>
+      <tr>
+        <td>Back porch</td>
+        <td>48</td>
+        <td align=right>1.9066534260179</td>
+      </tr>
+      <tr>
+        <td>Whole line</td>
+        <td>800</td>
+        <td align=right>31.777557100298</td>
+      </tr>
+    </table>
+    
+    <h4>Vertical timing (frame)</h4>
+    <table border=1 class="nowrap-table">
+      <tr>
+        <td>Frame part</td>
+        <td>Lines</td>
+        <td>Time [ms]</td>
+      </tr>
+      <tr>
+        <td>Visible area</td>
+        <td>480</td>
+        <td align=right>15.253227408143</td>
+      </tr>
+      <tr>
+        <td>Front porch</td>
+        <td>10</td>
+        <td align=right>0.31777557100298</td>
+      </tr>
+      <tr>
+        <td>Sync pulse</td>
+        <td>2</td>
+        <td align=right>0.063555114200596</td>
+      </tr>
+      <tr>
+        <td>Back porch</td>
+        <td>33</td>
+        <td align=right>1.0486593843098</td>
+      </tr>
+      <tr>
+        <td>Whole frame</td>
+        <td>525</td>
+        <td align=right>16.683217477656</td>
+      </tr>
+    </table>
+
+    <h3>Display configuration and timing theory</h3>
+    <p>
+    The Odyssey video card only displays 64 8-pixel-wide characters per row. Each character is 8 pixels
+    tall, making for 60 rows of characters on a 640x480 display. 64 characters per row is only 512 pixels
+    though, meaning there are 128 extra horizontal pixels that are unused, 64 on each side of the displayed
+    content.
+    </p>
+    <p>
+    I find it's best to think about how the video card works, by using the position of the electron beam
+    scanning across the display as the reference point.  As it moves across each line, a horizontal pixel
+    counter is incrementing as each new pixel appears under the electron beam. When the beam reaches the
+    end of the line, a horizontal sync pulse is generated, and the electron beam moves back to the beginning
+    of the line, which causes the vertical line counter to increment.
+    </p>
+    <p>
+    With a horizontal (column) count and a vertical (row) count, it is possible to use these counts to trigger
+    different behaviors at the precise right times to sync with the monitor. I'll talk about the character
+    and color generation in other sections. Here I'll just talk about the Hsync and Vsync signals. This
+    is the first milestone when building a video card - once you can generate the Hsync and Vsync signals with
+    the correct timing, your monitor will sync and report back to you that it is receiving a 640x480 60Hz
+    signal, though there will be no image yet.
+    </p>
+
+    <h3>Generating the Hsync signal</h3>
+    <p>
+    The pixel clock is defined by the spec as 25.175MHz.  So I use a can oscillator to generate
+    that exact frequency as the primary clock signal.  This signal is then fed into a 16-bit
+    synchronous counter built with <tt>74F161</tt> counters. I had to use the "F" series of
+    chips as "HC" logic does not work at 20+MHz speeds. Everything after the horizontal counter
+    runs at small fractions of the 25MHz pixel clock, and so HC logic can be used there.
+    A series of <tt>74x30</tt> 8-bit NAND gates are used to identify various values
+    in the pixel clock counter and generate signals when those values are present. The
+    horizontal counter is zero 8 pixels to the left of
+    <ul>
+      <li><b>7</b> and <b>519</b> - marks the beginning and end the viewable area. It starts at 7,
+          because the font ROM takes a non-trivial amount of time (several pixels) to load the first
+          character of the line into a register. So we actually start the character generation process
+          8 pixels early, to get the first character and color bytes loaded into the registers and ready
+          for the first displayable column. Then 519-7=512 pixels later, we turn mark the end of the
+          viewable area. The <tt>/HDRAW</tt> signal is thus pulled low during the time when the
+          electron beam scans across the 512 viewable pixels in a given row, and is high otherwise.
+          Note that <tt>/HDRAW</tt> is not a VGA signal, it's used inside the Odyssey video card to
+          prevent it from generating a non-zero pixel output outside the 512x480 drawable area.</li>
+      <li><b>600</b> and <b>696</b> - marks the beginning and end of the horizontal sync pulse. The
+          way this is computed is that "0" marks 8 pixels to the left of the display area. Then
+          520 pixels go by (512+8), and then 64 pixels (584) to get to the right edge of the visible
+          area (column 640 of the physical display). The "front porch" is 16 pixels wide, which
+          takes us to 584+16=600, when the Hsync pulse should start.  The Hsync pulse is 96 pixels
+          wide, so we reset Hsync at 600+96=696.</li>
+      <li><b>799</b> - The "back porch" adds another 48 pixels, 696+48=744, then we have another
+          56 (64-8) pixels before we reset the horizontal counter back to zero, which marks the
+          beginning of the display area (minus eight pixels).</li>
+    </ul>
+    The Hsync signal itself is generated by a <tt>/S/R</tt> latch - that's a super simple type of
+    latch, where a low pulse to the <tt>/S</tt> input causes the latch to be "set" (pulled low),
+    while a low pulse to the </tt>/R</tt> input causes the latch to be "reset" (pulled high). Using
+    a latch allows creation of a low pulse that lasts for dozens or hundreds of clock ticks, without
+    needing complex combinatorial logic to match that exact set of numbers on the horizontal counter.
+    Just match the start number and pulse the <tt>/S</tt> line, then match the end number and pulse
+    the <tt>/R</tt> line.
+    </p>
+
+    <h3>Generating the Vsync signal</h3>
+    <p>
+    The Vsync signal is generated precisely the same way as the Hsync signal, only instead of using
+    the pixel clock and the primary counter input, the Hsync signal itself is used as the counter
+    input. That allows the counter to count the number of rows drawn, starting at zero. Just like
+    the horizontal sync generation, there are four sets of NAND counter matchers that detect the
+    start and end of the drawable area as well as the start and end of the Vsync pulse. A fifth
+    matcher checks for the last line and resets the counter back to zero when the electron beam
+    is back to the top of the display.
+    <ul>
+      <li><b>0</b> - when the vertical counter is at zero, the electron beam is on the first viewable
+            (and drawable) line on the display. So <tt>/VDRAW</tt> gets asserted (set) when the vertical
+            counter is reset.</li>
+      <li><b>480</b> - after 480 lines have been drawn, <tt>/VDRAW</tt> is reset, as we are now outside
+            the drawable area. This ensures the pixel output is always low when outside the drawable area.</li>
+      <li><b>490</b> - 10 lines later we've covered the front porch and and <tt>/VSYNC</tt> is pulled
+            low by pulsing <tt>/S</tt> on its <tt>/S/R</tt> latch.</li>
+      <li><b>492</b> - The Vsync pulse is only 2 lines long, so at 492 we pulse <tt>/R</tt> on the
+            <tt>/VSYNC</tt> <tt>/S/R</tt> latch to bring it high again.</li>
+      <li><b>525</b> - The back porch takes another 33 lines, which brings us to 525, at which point
+            the vertical counter is reset, which puts us back at the top line of the viewable area.</li>
+    </ul>
+
+    <h3>Block Diagram</h3>
+    <p>
+    The Hsync and Vsync generation are shown in the top two boxes
+    </p>
+    <figure class='figure-container'>
+      <a href="img/GPU Block Diagram.drawio.svg" target=_blank><img width=600 src="img/GPU Block Diagram.drawio.svg"></a>
+      <figcaption class='figure-caption'>Block diagram of the Wire Wrap Odyssey video card. Click to open fullsize in a new tab.</figcaption>
+    </figure>
+
+  </div>
+</body>
+</html>
