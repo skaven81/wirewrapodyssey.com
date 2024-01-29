@@ -1,0 +1,244 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Video Card: Character Generation
+  </div>
+  <div class='section-body'>
+    <h2>Video Card: Character Generation</h2>
+
+    <h3>Overview</h3>
+    <p>
+    The Odyssey video card runs at 640x480. The "brute force" approach to drawing stuff on the screen would be
+    to designate a byte for each pixel. Each byte could contain color data (up to 256 colors). So that would
+    require 307,200 bytes of RAM in the video card framebuffer. Not only is that more RAM than the video
+    card has available, it's more RAM than the CPU can even address. Even if the CPU could address it all,
+    and could update a byte every other clock cycle, the CPU running at 1MHz would require over 600ms to update
+    the entire display. That would be far too slow to do much of anything useful. And consider that 600ms
+    would be just raw updates to the display. If we used the CPU to draw the characters in a text display
+    pixel-by-pixel, it would surely take dozens or even hundreds of clock cycles to update the frame buffer
+    for every single character on the screen. So now you're talking about <i>seconds</i> of time just to
+    update the display.
+    </p>
+    <p>
+    How to solve this? Computers in the 70s and 80s and even 90s, got around this constraint by using
+    <i>character generation</i> hardware. Instead of the CPU writing individual pixels to the video card's
+    frame buffer, the CPU would write <i>characters</i>, and the video card would handle writing out the
+    individual pixels. For the Odyssey video card, I've designated the top 4KiB of RAM (<tt>0x0000-0x0fff</tt>
+    from the video card's perspective, or <tt>0x4000-0x4fff</tt> from the CPU's perspective) to the
+    frame buffer. 64x64=4096. So I took the seemingly reasonable approach of having lines of 64 characters
+    each. If each character is 8 pixels wide, that is 512 pixels, which will fit in a 640 pixel wide display
+    with some letterboxing on either side. If each character is 8 pixels tall, that's also 512 pixels, which
+    will not fit in 480 vertical pixels. So we can only fit 60 rows of characters.
+    </p>
+    <p>
+    So we have a 64x60 grid of characters, arranged in RAM, from the video card's perspective, at
+    <tt>0x0000-0xefff</tt>. Each byte in that range contains an ASCII character that the CPU is asking
+    the video card to draw on our behalf. How do we do that in hardware?
+    </p>
+    <p>
+    The trick is to use the horizontal and vertical counters (see 
+    <a href="javascript:show_content('video-hsync-vsync')">Hsync &amp Vsync Generation</a>) as <i>addresses</i>
+    into the RAM, as well as into a font ROM. This is straight out of the playbook for older ISA video
+    cards of the 80s. It works by carefully mapping counters into the address pins.
+    </p>
+
+    <p>
+    Imagine the electron beam scanning across a line of the display. As it scans along, the lowest
+    three bits of <tt>HCOUNT</tt> (<tt>HCOUNT[2-0]</tt>) will always correspond to values 0-7. Similarly,
+    as the electron beam moves down the lines of the display, the lowest three bits of <tt>VCOUNT</tt>)
+    (<tt>VCOUNT[2-0]</tt>) will always correspond to values 0-7. So we can think of those bottom three
+    bits as an index into the rows and columns describing a <i>bitmap</i> for a character:
+    </p>
+
+    <table class="font-table">
+    <tr>
+      <td>V[0],H[0]</td>
+      <td>V[0],H[1]</td>
+      <th>V[0],H[2]</td>
+      <th>V[0],H[3]</td>
+      <td>V[0],H[4]</td>
+      <td>V[0],H[5]</td>
+      <td>V[0],H[6]</td>
+      <td>V[0],H[7]</td>
+    </tr>
+    <tr>
+      <td>V[1],H[0]</td>
+      <th>V[1],H[1]</td>
+      <th>V[1],H[2]</td>
+      <th>V[1],H[3]</td>
+      <th>V[1],H[4]</td>
+      <td>V[1],H[5]</td>
+      <td>V[1],H[6]</td>
+      <td>V[1],H[7]</td>
+    </tr>
+    <tr>
+      <th>V[2],H[0]</td>
+      <th>V[2],H[1]</td>
+      <td>V[2],H[2]</td>
+      <td>V[2],H[3]</td>
+      <th>V[2],H[4]</td>
+      <th>V[2],H[5]</td>
+      <td>V[2],H[6]</td>
+      <td>V[2],H[7]</td>
+    </tr>
+    <tr>
+      <th>V[3],H[0]</td>
+      <th>V[3],H[1]</td>
+      <td>V[3],H[2]</td>
+      <td>V[3],H[3]</td>
+      <th>V[3],H[4]</td>
+      <th>V[3],H[5]</td>
+      <td>V[3],H[6]</td>
+      <td>V[3],H[7]</td>
+    </tr>
+    <tr>
+      <th>V[4],H[0]</td>
+      <th>V[4],H[1]</td>
+      <th>V[4],H[2]</td>
+      <th>V[4],H[3]</td>
+      <th>V[4],H[4]</td>
+      <th>V[4],H[5]</td>
+      <td>V[4],H[6]</td>
+      <td>V[4],H[7]</td>
+    </tr>
+    <tr>
+      <th>V[5],H[0]</td>
+      <th>V[5],H[1]</td>
+      <td>V[5],H[2]</td>
+      <td>V[5],H[3]</td>
+      <th>V[5],H[4]</td>
+      <th>V[5],H[5]</td>
+      <td>V[5],H[6]</td>
+      <td>V[5],H[7]</td>
+    </tr>
+    <tr>
+      <th>V[6],H[0]</td>
+      <th>V[6],H[1]</td>
+      <td>V[6],H[2]</td>
+      <td>V[6],H[3]</td>
+      <th>V[6],H[4]</td>
+      <th>V[6],H[5]</td>
+      <td>V[6],H[6]</td>
+      <td>V[6],H[7]</td>
+    </tr>
+    <tr>
+      <td>V[7],H[0]</td>
+      <td>V[7],H[1]</td>
+      <td>V[7],H[2]</td>
+      <td>V[7],H[3]</td>
+      <td>V[7],H[4]</td>
+      <td>V[7],H[5]</td>
+      <td>V[7],H[6]</td>
+      <td>V[7],H[7]</td>
+    </tr>
+    </table>
+    <p>
+    So what this means is that every 8th pixel that the electron beam comes across (whenever
+    the last three bits of <tt>HCOUNT</tt> are <tt>0b000</tt>), we can load a new character
+    from the framebuffer, and a new character bitmap from the font ROM. And the value of the
+    last three bits of <tt>VCOUNT</tt> will tell us which row of the bitmap we need.
+    </p>
+
+    <p>
+    Here is how the horizontal and vertical counter bits are fed into the frame buffer RAM address:
+    </p>
+    <table class="bit-table">
+    <tr>
+      <th>11</td>
+      <th>10</td>
+      <th>9</td>
+      <th>8</td>
+      <th>7</td>
+      <th>6</td>
+      <th>5</td>
+      <th>4</td>
+      <th>3</td>
+      <th>2</td>
+      <th>1</td>
+      <th>0</td>
+    </tr>
+    <tr>
+      <td colspan=6><tt>VCOUNT[8-3]</tt></td>
+      <td colspan=6><tt>HCOUNT[8-3]</tt></td>
+    </tr>
+    </table>
+
+    <p>
+    The frame buffer RAM will return an 8-bit value (the ASCII character we want to draw) when
+    this address is fed in. We can then feed <i>that</i> value, along with the last three bits
+    of <tt>VCOUNT</tt>, into the font ROM:
+    </p>
+
+    <table class="bit-table">
+    <tr>
+      <th>10</td>
+      <th>9</td>
+      <th>8</td>
+      <th>7</td>
+      <th>6</td>
+      <th>5</td>
+      <th>4</td>
+      <th>3</td>
+      <th>2</td>
+      <th>1</td>
+      <th>0</td>
+    </tr>
+    <tr>
+      <td colspan=8><tt>ASCII_CHAR</tt></td>
+      <td colspan=3><tt>VCOUNT[2-0]</tt></td>
+    </tr>
+    </table>
+
+    <p>
+    The output of the font ROM will be an 8-bit byte corresponding to the row of
+    the bitmap for the ASCII character the electron beam is currently scanning over.
+    </p>
+
+    <h3>Putting it all together</h3>
+    <p>
+    Take a look at the block diagram below (click it to get the full size version).
+    In the green box you'll find the character generation block diagram. Observe how
+    we feed <tt>VCOUNT[8-3]</tt> and <tt>HCOUNT[8-3]</tt> into the RAM. The output of
+    this is dropped into an 8-bit "character register", which stores the ASCII value
+    of the current character we are drawing.  That value is then fed into the
+    font ROM, along with <tt>VCOUNT[2-0]</tt>, to generate an 8-bit value, which is
+    one row of a character's bitmap. That value is dumped into a <tt>74x166</tt>
+    shift register, and every tick of the pixel clock, the next pixel value (on or off)
+    is generated at the <tt>PIXEL_A</tt> signal.
+    </p>
+    <p>
+    There's other logic in there too that deals with how to handle color and a cursor,
+    but we'll talk about that in the next section.
+    </p>
+
+    <h3>How realistic is this really?</h3>
+    <p>
+    So is this really how video cards back in the 80s and 90s did things? Well, I can't
+    say for sure, as I don't have insight into the actual implementations of old cards.
+    But it's quite telling that if you go to <a href=https://int10h.org>int10h.org</a>
+    and download ROM dumps for the 8x8 fonts, they are in precisely the same format
+    as the Odyssey video card's font ROM. To me, that says the architecture is sufficiently
+    similar to say that I've faithfully reproduced it. In fact, all the fonts that
+    I currently use in the Odyssey video card are from <a href=https://int10h.org>int10h.org</a>,
+    I literally just concatenated a bunch of the 8x8 font files and wrote them to
+    an AT28C256 EEPROM and used it as my font ROM. I have some DIP switches that let
+    me select the top four bits of the ROM, which lets me choose between up to sixteen
+    different fonts without even resetting the computer. The fonts update on the display
+    in real time as I flip the DIP switches. It's pretty slick.
+    </p>
+
+    <h3>Block Diagram</h3>
+    <p>
+    The Hsync and Vsync generation are shown in the top two boxes
+    </p>
+    <figure class='figure-container'>
+      <a href="img/GPU Block Diagram.drawio.svg" target=_blank><img width=600 src="img/GPU Block Diagram.drawio.svg"></a>
+      <figcaption class='figure-caption'>Block diagram of the Wire Wrap Odyssey video card. Click to open fullsize in a new tab.</figcaption>
+    </figure>
+
+  </div>
+</body>
+</html>
