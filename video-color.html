@@ -1,0 +1,144 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Video Card: Color Generation
+  </div>
+  <div class='section-body'>
+    <h2>Video Card: Color Generation</h2>
+
+    <h3>Overview</h3>
+    <p>
+    If you're been reading through the video card architecture pages, you should already be familiar with
+    <a href="javascript:show_content('video-hsync-vsync')">Hsync &amp Vsync Generation</a> and
+    <a href="javascript:show_content('video-char')">Character Generation</a>. Let's now discuss how to add
+    color to the display.
+    </p>
+
+    <h3>How VGA generates pixels</h3>
+    <p>
+    The VGA plug has three pins, one each for red, green, and blue. On CRTs, these were wired directly
+    (via some amplifier circuitry) to the electron guns for each of the three colors. The VGA spec
+    dictates that for black, the pin should be at 0 volts, and for full brightness for that color,
+    the pin should be at 0.7 volts. So to generate a white pixel, you'd bring all three red, green,
+    and blue pins to 0.7 volts. to generate a yellow pixel, you'd bring red and green to 0.7 volts,
+    and blue to 0 volts. It's analog, so any voltage betwen 0 and 0.7 volts is OK.
+    </p>
+
+    <h3>Color in the Odyssey video card</h3>
+    <p>
+    I followed the same approach for color as I did for character generation. I designated another
+    4KiB block of the frame buffer memory to color data. So for any given byte in the character frame buffer,
+    I can find a color byte by just adding <tt>0x1000</tt> to the character address. From the CPU's perspective,
+    <tt>0x4000</tt> is the first character on the display. <tt>0x5000</tt> is thus the color byte
+    for that character. This approach allows me to use all the same counters and addressing schemes
+    to find color data, only with the 13th bit set to 1 instead of 0.
+    </p>
+
+    <p>
+    Each byte in the color range contains these bits:
+    </p>
+    <table class="bit-table">
+    <tr>
+      <th>7</td>
+      <th>6</td>
+      <th>5</td>
+      <th>4</td>
+      <th>3</td>
+      <th>2</td>
+      <th>1</td>
+      <th>0</td>
+    </tr>
+    <tr>
+      <td colspan=1>blink</td>
+      <td colspan=1>crsr</td>
+      <td colspan=2>R</td>
+      <td colspan=2>G</td>
+      <td colspan=2>B</td>
+    </tr>
+    </table>
+
+    <p>
+    This arrangement allows each character to be displayed in one of 64 different colors.
+    </p>
+
+    <div class="tip-container">
+    <p>
+    This is a place where I made a bad architectural decision. On the old 80s and 90s video
+    cards, six bits of color data were (likely) arranged like so:
+    </p>
+    <table class="bit-table">
+    <tr>
+      <th>7</td>
+      <th>6</td>
+      <th>5</td>
+      <th>4</td>
+      <th>3</td>
+      <th>2</td>
+      <th>1</td>
+      <th>0</td>
+    </tr>
+    <tr>
+      <td colspan=1>crsr</td>
+      <td colspan=1>back-R</td>
+      <td colspan=1>back-G</td>
+      <td colspan=1>back-B</td>
+      <td colspan=1>bright</td>
+      <td colspan=1>fore-R</td>
+      <td colspan=1>fore-G</td>
+      <td colspan=1>fore-B</td>
+    </tr>
+    </table>
+    <p>
+    This arrangement (or something like it) provides for 16 colors. If bit #3 is 0, the red, green and blue
+    signals are all emitted at half brightness. If bit #3 is 1, they're all emitted at full brightness. That
+    means you get 8 principal colors (black, red, green, blue, cyan, magenta, orange, white) that can then
+    be brightened to make 8 more colors. This arrangement leaves three bits for defining the background color,
+    (which can only be the half-brightness variety) and still leaves a spare bit for specifying a cursor
+    (or maybe a blink bit).
+    </p>
+    <p>
+    The color layout I chose for the Odyssey gave up being able to set a background color in favor of having
+    64 discrete colors. But in practice, it turns out that 8/16 colors is plenty, and I really do miss having
+    background colors.
+    </div>
+
+    <h3>Generating color signals</h3>
+    <p>
+    Review the block diagram below (click to embiggen) in the bottom two boxes, "Blink, Cursor, and Viewable Area
+    Logic", and "Color Generation". When each new character is loaded from the framebuffer, a color byte is also
+    loaded (there is some clever timing involved to perform both of those reads at the right time). The color
+    byte register's outputs are fed through some combinatorial logic so that if the current pixel is "on",
+    the correct R, G, B bits are fed to the color outputs. If the current pixel is "off", a black signal
+    (all zeroes) are fed to the color outputs.
+    </p>
+    <p>
+    There is also some logic that takes the <tt>SLOW_CLK</tt> (which is just a square wave cycling at around
+    2-4Hz) and if the <tt>BLINK</tt> bit is set for the character, gates the color outputs as well. The same
+    <tt>SLOW_CLK</tt> is used with the <tt>CURSOR</tt> bit, so that if the character has the cursor enabled,
+    and <tt>SLOW_CLK</tt> is low, and it's the seventh or eighth line of the bitmap, that the color outputs
+    are all set to maximum value (so a white pixel is drawn).
+    </p>
+    <p>
+    To generate the 0-0.7 volt signal, a resistor voltage divider is used to take the 0-5 volt digital signal
+    coming from the output of the combinatorial logic, into the appropriate signal. Note that the VGA cabling spec
+    dictates that the R, G, and B lines all have a 75 ohm pull-down resistor, so you have to account for
+    that when designing your voltage divider. I ended up just copying Ben Eater's design from
+    his <a href='https://eater.net/vga'>Let's build a video card</a> video series. In the second video he
+    describes how to generate the RGB signals using a resistor network, using 1.5k and 680 ohm resistors.
+    </p>
+
+    <h3>Block Diagram</h3>
+    <p>
+    The Hsync and Vsync generation are shown in the top two boxes
+    </p>
+    <figure class='figure-container'>
+      <a href="img/GPU Block Diagram.drawio.svg" target=_blank><img width=600 src="img/GPU Block Diagram.drawio.svg"></a>
+      <figcaption class='figure-caption'>Block diagram of the Wire Wrap Odyssey video card. Click to open fullsize in a new tab.</figcaption>
+    </figure>
+
+  </div>
+</body>
+</html>
