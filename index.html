@@ -66,6 +66,7 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
   <a class="w3-bar-item w3-button" href="javascript:show_content('construction')">Construction</a>
   <a class="w3-bar-item w3-button" href="javascript:show_content('photos')">Photos</a>
   <a class="w3-bar-item w3-button" href="javascript:show_content('documentation')">Documents &amp; Links</a>
+  <a class="w3-bar-item w3-button" href="javascript:show_content('contact')">Contact</a>
 </nav>
 
 <div class="w3-overlay w3-hide-large w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" id="myOverlay"></div>
@@ -156,6 +157,7 @@ function show_content(id) {
       tempElement.innerHTML = data;
       document.getElementById('content').innerHTML = tempElement.querySelector('.section-body').innerHTML;
       document.getElementById('section-header').innerHTML = tempElement.querySelector('.section-title').innerHTML;
+      generateEmailLink();
     })
     .catch(error => {
       console.error("Error in fetch operation:", error);
@@ -203,6 +205,22 @@ function accordion_close(id) {
 function accordion_and_show_content(accordion_id, show_id) {
   accordion_open(accordion_id);
   show_content(show_id);
+}
+
+function generateEmailLink() {
+    var parts = [ "cGF1bAo=", "a3JpemFrCg==", "Z21haWwK", "Y29tCg==", "b2R5c3NleQo=" ];
+    var contactParagraph = document.getElementById('contact');
+    if (contactParagraph) {
+			console.log("found contactParagraph");
+			var emailLink = document.createElement('a');
+			emailLink.setAttribute('href', 'mailto:' + atob(parts[0]) + "." + atob(parts[1]) + "+" + atob(parts[4]) + "@" + atob(parts[2]) + "." + atob(parts[3]));
+			emailLink.innerHTML = 'Contact me via e-mail';
+			contactParagraph.innerHTML = '';
+			contactParagraph.appendChild(emailLink);
+		}
+    else {
+      console.log("Did not find contactParagraph");
+    }
 }
 </script>
    
