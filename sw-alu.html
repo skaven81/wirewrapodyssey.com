@@ -1,0 +1,114 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Software: ALU Generation
+  </div>
+  <div class='section-body'>
+    <h2>Software: ALU Generation</h2>
+
+    <h3>Overview</h3>
+    <p>
+    As discussed at <a href="javascript:show_content('arch-alu')">Architecture: ALU</a>, the ALU for
+    the Odyssey computer is implemented as a lookup table (LUT) in a pair of <tt>AT28C256</tt> 32KiB
+    EEPROMs. Each EEPROM implements a 4-bit slice of the ALU. The 15 address bits of the EEPROM are
+    mapped as follows:
+    </p>
+    <table class="bit-table">
+      <tr>
+        <th>14</td>
+        <th>13</td>
+        <th>12</td>
+        <th>11</td>
+        <th>10</td>
+        <th>9</td>
+        <th>8</td>
+        <th>7</td>
+        <th>6</td>
+        <th>5</td>
+        <th>4</td>
+        <th>3</td>
+        <th>2</td>
+        <th>1</td>
+        <th>0</td>
+      </tr>
+      <tr>
+        <td colspan=5><tt>ALUOP</tt></td>
+        <td colspan=1><tt>Cin-MSB</tt></td>
+        <td colspan=1><tt>Cin-LSB</tt></td>
+        <td colspan=4><tt>A</tt></td>
+        <td colspan=4><tt>B</tt></td>
+      </tr>
+    </table>
+    <p>
+    And the 8-bit output value is mapped as:
+    </p>
+    <table class="bit-table">
+      <tr>
+        <th>7</td>
+        <th>6</td>
+        <th>5</td>
+        <th>4</td>
+        <th>3</td>
+        <th>2</td>
+        <th>1</td>
+        <th>0</td>
+      </tr>
+      <tr>
+        <td colspan=1><tt>Z</tt></td>
+        <td colspan=1><tt>E</tt></td>
+        <td colspan=1><tt>Cout-MSB</tt></td>
+        <td colspan=1><tt>Cout-LSB</tt></td>
+        <td colspan=4><tt>OUT</tt></td>
+      </tr>
+    </table>
+    <p>
+    To generate the LUT, is a (relatively) simple matter of enumerating all 32,768 input states,
+    computing the output state, and storing all of these in a binary file that is flashed to
+    the EEPROM.
+    </p>
+
+    <h3>Code</h3>
+    <p>
+    The source code for the ALU generator is <a href=https://github.com/skaven81/mycpu/tree/master/alu>here</a>.
+    The primary source is <a href=https://github.com/skaven81/mycpu/blob/master/alu/four_bit_alu.py>four_bit_alu.py</a>,
+    which defines a class named <tt>FourBitALU</tt>. Each instance of the class
+    fixes all of the input values except for the opcode, as well as a flag
+    indicating whether it's the "high" ALU or not. Then there is a single
+    method, <tt>compute(op)</tt>, which computes the expected value for the
+    given opcode.
+    </p>
+    <p>
+    It's probably not the best model -- I probably should have moved the other inputs into the arguments for
+    the <tt>compute()</tt> method and just left the <tt>self.high</tt> attribute as the only one defined at
+    construction. But it works.
+    </p>
+    <p>
+    Importantly, throughout the <tt>compute()</tt> method, I have tons of assertions to make sure that the
+    output is being computed correctly, and that I'm not truncating extra bits or anything like that.
+    </p>
+    <p>
+    There is then <a href=https://github.com/skaven81/mycpu/blob/master/alu/eight_bit_alu.py>eight_bit_alu.py</a>,
+    which is a software simulator of the full ALU with both EEPROMs. It stitches two instances of the <tt>FourBitALU</tt>
+    class together the same way the physical LUTs are wired in the Odyssey, and then provides its own
+    <tt>compute()</tt> method that generates the full eight bit values.
+    </p>
+    <p>
+    With this code in place, I wrote some simple test scripts:
+    <ul>
+      <li><a href=https://github.com/skaven81/mycpu/blob/master/alu/alu_sim.py>alu_sim.py</a> - iterates through
+        all possible input values for the combined 8-bit ALU, checking for any assertion errors.</li>
+      <li><a href=https://github.com/skaven81/mycpu/blob/master/alu/alu_repl.py>alu_repl.py</a> - a utility for
+        running a REPL (read, execute, print, loop) on a simulated 8-bit ALU. This allows me to run quick verifications
+        against what I see in the physical computer, and compare it with the simulation, to make sure that they match.</li>
+    </ul>
+    </p>
+    <p>
+    Finally, <a href=https://github.com/skaven81/mycpu/blob/master/alu/gen_alu_roms.py>gen_alu_roms.py</a> performs
+    the bitwise iteration to generate the binary ROM images to flash into the EEPROMs.
+    </p>
+  </div>
+</body>
+</html>
