@@ -1,0 +1,217 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Software: Assembler
+  </div>
+  <div class='section-body'>
+    <h2>Software: Assembler</h2>
+    <p>
+    What I collectively call the "assembler" is actually several components that are all tied together.
+    </p>
+
+    <h3>Control Signals</h3>
+    <p>
+    The <a href=https://github.com/skaven81/mycpu/blob/master/assembler/control_signals>control_signals</a> file
+    is a list of all 32 control signals that can be asserted by a given micro-op (see
+    <a href="javascript:show_content('arch-instruction')">Architecture: Instruction Decoding</a> for
+    more details. The <tt>control_signals</tt> file maps human-parseable names (also, names that
+    appear in my logic analyzer) to their control ROM and bit position in that ROM, as well as defining
+    a default (idle) state for that control signal.
+    </p>
+    <p>
+    For example, take the following signal:
+    </p>
+    <pre>
+    # Instruction &amp; Sequence
+    (/NEWOP) 1 0 0x08 # write to opcode register and reset the sequence counter on the next clock
+    </pre>
+    <p>
+    This syntax defines a control signal named <tt>/NEWOP</tt>, whose default state is 1 (high). It
+    lives on control ROM 0 at position <tt>0x08</tt> (the fourth bit).
+    </p>
+    <p>
+    Here's another example:
+    </p>
+    <pre>
+    # Program counter write select
+    # 0: do nothing
+    # 1: increment PC
+    # 2: Load PC-low from data bus
+    # 3: Load PC-high from data bus
+    (PCWSEL) 0 1 0x0c
+    </pre>
+    <p>
+    This defines a control signal named <tt>PCWSEL</tt> that has a default value of 0 (both bits low).
+    It lives on control ROM 1 at position <tt>0x0c</tt> (the third and fourth bits).
+    </p>
+    <p>
+    All 32 control signals are mapped out in this way, so that if I make any physical wiring changes
+    to the CPU, I only have to update this one file to reflect the change, and rebuild the control ROMs.
+    <p>
+
+    <h3>Macros</h3>
+    <p>
+    The <a href=https://github.com/skaven81/mycpu/blob/master/assembler/macros>macros</a> file
+    takes control signals and combines them into "actions". Here's an example:
+    </p>
+    <pre>
+    {IncrementPC}
+    PCWSEL=1
+
+    {WritePCL}
+    PCWSEL=2
+
+    {WritePCH}
+    PCWSEL=3
+    </pre>
+    <p>
+    This defines three macros, each of which dictate that a given control signal should be set
+    to the stated value. I've written it so that for control signals that only have one bit,
+    the control signal can simply be stated, and the implied action is that its value will be
+    inverted from its default (idle) state.
+    </p>
+    <pre>
+    {WriteStatus}
+    /WSTAT
+    </pre>
+    <p>
+    The macros can be thought of like "nano-ops" -- they are the building blocks used to
+    construct micro-ops.
+    </p>
+
+    <h3>Opcodes</h3>
+    <p>
+    The <a href=https://github.com/skaven81/mycpu/blob/master/assembler/gen_opcodes.sh>gen_opcodes.sh</a> script
+    generates the opcodes (the complete instruction set) for the Odyssey CPU. Each opcode
+    is defined with an opcode ID (<tt>0x00-0xff</tt>), a name (so we can use it in assembly language), and
+    any arguments (bytes) that are expected to come after the opcode. Here's a simple one:
+    </p>
+    <pre>
+    [0x0d] DECR_D
+    x 0 IncrementPC DecrementD
+    x 1 NextInstruction
+    </pre>
+    <p>
+    In the <tt>DECR_D</tt> opcode, the first micro-op activates the <tt>IncrementPC</tt> and <tt>DecrementD</tt>
+    macros, which in turn dictate which control signals need to be set. Then the second micro-op activates the
+    <tt>NextInstruction</tt> macro, which sets the control signals to load the next opcode from the program counter's 
+    address into the opcode register, and to reset the sequence counter.
+    </p>
+    <p>
+    A more complex example with arguments:
+    </p>
+    <pre>
+    [0x0e] ST16 @addr @data
+    x 0 IncrementPC IncrementSP
+    # PC now points at high byte of address
+    # Push D reg onto stack
+    x 1 AddrBusSP DataBusDL WriteRAM IncrementSP
+    x 2 AddrBusSP DataBusDH WriteRAM
+    x 3 AddrBusPC WriteDH IncrementPC
+    # PC now points at low byte of address
+    x 4 AddrBusPC WriteDL IncrementPC
+    # PC now points at high byte of data
+    x 5 AddrBusPC WriteTD IncrementPC
+    # PC now points at low byte of data
+    x 6 AddrBusD DataBusTD WriteRAM
+    x 7 AddrBusPC WriteTD IncrementD
+    x 8 AddrBusD DataBusTD WriteRAM IncrementPC
+    # PC now points at next instruction
+    # Pop D reg from stack
+    x 9 AddrBusSP WriteDH DecrementSP
+    x a AddrBusSP WriteDL DecrementSP
+    x b NextInstruction
+    </pre>
+    <p>
+    This one defines the <tt>ST16</tt> opcode, which is expected to have four bytes after it, an address and a
+    16 bit data word. In the opcode specification, arguments with <tt>$</tt> prefixes are 8-bit bytes, while those
+    with <tt>@</tt> prefixes are 16-bit words. Yeah, I used to write a lot of Perl.
+    </p>
+
+    <h3>Control ROM Generation</h3>
+    <p>
+    With the above three components, it is possible to generate the control ROMs.
+    The <a href=https://github.com/skaven81/mycpu/blob/master/assembler/gen_roms.py>gen_roms.py</a>
+    script takes care of this by reading the <tt>control_signals</tt>, <tt>macros</tt>,
+    and <tt>opcodes</tt> files, then iterating through all 256 possible opcodes with all of
+    the possible ALU flags and sequence numbers, and generates the 32 control signals.
+    The results are written out into four 32KiB binary files that are then flashed
+    to the control ROMs.
+    </p>
+    <p>
+    This system makes the Odyssey very easy to customize. If I were to change a control
+    signal, all I would need to do is update the <tt>control_signals</tt> file (and maybe
+    the <tt>macros</tt> file) and re-generate the control ROMs. Similarly (and more commonly),
+    if I want to change the behavior of an instruction, or add a new instruction, I just need
+    to update <tt>gen_opcodes.sh</tt> and write out (in pretty easy to read syntax) exactly
+    what I want the instruction to do. Then run <tt>gen_roms.py</tt> and flash the new ROMs.
+    </p>
+
+    <h3>Assembler</h3>
+    <p>
+    The assembler is still very much a work in progress. It is tied to all the stuff above because
+    I have written it to read in the <tt>opcodes</tt> and generate its internal parser based
+    on that. This ensures that if I make a change in the instruction set, I only have to
+    edit the <tt>gen_opcodes.sh</tt> script, not go fuss around in the assembler to make it
+    match how the instructions actually work.
+    </p>
+    <p>
+    The assembler can be found <a href=https://github.com/skaven81/mycpu/blob/master/assembler/assembler.py>here</a>.
+    It is very rudimentary, but I keep making gradual improvements to it. As of February 2024,
+    the assembler is basically just a sanity checker (ensures that every instruction in the
+    assembly file exists, and that appropriate arguments are provided to each one) and a very
+    basic linker (resolves labels into memory addresses). It also can do some basic preprocessing,
+    by reading the <a href=https://github.com/skaven81/mycpu/blob/master/assembler/asm_macros>asm_macros</a>
+    file, and replacing matching strings with their numeric counterparts, which helps to make
+    the assembly more readable.
+    </p>
+    <p>
+    The current assembler has some significant limitations today, that I plan to address
+    in the (hopefully near) future:
+    <ul>
+      <li>All machine code generated by the assembler starts at <tt>0x0000</tt>. It is not possible
+        to write <i>relocatable</i> code using the assembler today. I will need to add this
+        ability so that I can write programs that are loaded from disk into RAM and executed
+        from there.</li>
+      <li>The assembler reads everything as one giant monolithic assembly file. To assemble a
+        binary machine code file, I literally just concatenate all the assembly files (including
+        all the library files) and assemble it all at once. What would be better (and match what
+        proper assemblers do) is to be able to assemble an assembly file and generate an object
+        file, which still contains labels, then be able to run a separate <i>linker</i> that
+        performs the label resolution. This will become necessary as I begin writing programs
+        that live outside the main program ROM. Today I'm basically just writing a BIOS ... all
+        of the software is in ROM and thus has a fixed address. But in the future I will need
+        to be able to write programs that <i>reference</i> functions in ROM, but not need
+        to include them directly. By generating object files and a symbol table, I can read
+        the symbol table for the OS/BIOS (which is in ROM), and use it as input to a linker
+        that can generate executable (and relocatable) machine code that can run from RAM
+        while still calling functions in ROM.</li>
+      <li>There is no way today to perform "imports" or "includes". The assembler today will
+        barf with errors if you don't assemble 100% of all the possible machine code all
+        at once. I'll need ot fix that to start writing "real" programs.</li>
+      <li>The assembly language is not very forgiving. Since the opcodes include the register
+        names in the instruction name itself, there are a bunch of underscores that make it
+        tiring to write assembly for the Odyssey. I would like to update the assembler so that
+        instead of writing something like this:
+        <pre>
+        LDI_AL 0x40
+        ALUOP_ADDR_D %A+B%+%AL%+%BH%
+        </pre>
+        I can instead write something a bit easier to type and read, like:
+        <pre>
+        ld al 0x40
+        add al+bh &amp;D
+        </pre>
+        and have the assembler translate that into the correct machine code. Today, the assembler
+        is <i>extremely</i> literal. The assembly code is really just a thin veneer over the
+        raw machine code. By making the assembler have a more general language which is then
+        <i>translated</i> into the Odyssey opcodes and arguments, then into machine code, it would
+        make reading and writing a lot of stuff easier.</li>
+    </ul>
+    </p>
+  </div>
+</body>
+</html>
