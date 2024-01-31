@@ -177,6 +177,36 @@ vim: ts=2 sts=2 sw=2 expandtab
     also lead to broken bits of wire falling off and causing shorts in the project.
     </p>
 
+    <h3>Netlist Generation</h3>
+    <p>
+    An important part of working on a wire wrap prototype board like this is a properly
+    documented netlist. This provides coordinates for every wire wrap connection that
+    is made. It is virtually impossible to wire up a complex circuit "on the fly" without
+    prior planning.
+    </p>
+    <p>
+    If you look through the <a href="pdf/cpu.pdf" target=_blank>Odyssey CPU notes PDF</a>,
+    you will see page after page of hand-drawn netlists, with the left side of the page
+    showing a single column of 50 wire wrap posts. The chip positions are drawn in, with
+    annotations to show what function is at each pin position. Just outside, the desired
+    signal is shown. I don't have a standard for this -- whatever makes sense at the time
+    is what I draw in. Sometimes it's lines like a schematic, other times it's symbols,
+    and other times it's words and control signal names. Finally, the bulk of the page
+    is consumed with a giant list of connection pairs, showing every wire wrap connection
+    that is needed.
+    </p>
+    <p>
+    Once I complete the netlist, I put on some music, flip the protoyping board over,
+    and start making connections. Each connection takes me about 30-60 seconds to complete.
+    Cut wire to the appropriate length, strip both ends, wrap, route, wrap, and repeat.
+    Each net gets a checkmark when I complete it, so I don't lose my place if I get
+    interrupted.
+    </p>
+    <p>
+    Usually after each "block" of nets, I'll go back with a continuity tester on my
+    multimeter (beeper) and "buzz" the board from the topside, to make sure I've connected
+    all the nets correctly.
+    </p>
   </div>
 </body>
 </html>
