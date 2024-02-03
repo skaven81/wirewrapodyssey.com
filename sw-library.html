@@ -1,0 +1,69 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Software: OS Library
+  </div>
+  <div class='section-body'>
+    <h2>Software: OS Library</h2>
+    <p>
+    As much work as it has been, the physical construction and verification of the
+    Odyssey computer is only half the battle. In order to make a computer that is
+    actually usable and not just a "toy", it needs to have an operating system of
+    sorts, so that different programs can be executed, storage can be browsed,
+    and data saved and retrieved.
+    </p>
+    <p>
+    Early 8-bit computers accomplished this in different ways, but as I was most
+    familiar with the x86 series of computers growing up, I was most familiar with
+    the concept of a BIOS (Basic Input/Output System). The idea is that common
+    functions for interacting with the hardware, such as printing to the display,
+    interfacing with the serial port, allocating memory, and browsing attached
+    storage devices, were all provided by the hardware itself in ROM. Software
+    written for such systems did not need to implement their own drivers for the
+    hardware: all they had to do was set some CPU registers and trigger an interrupt,
+    or perhaps directly call a function in ROM.
+    </p>
+    <p>
+    I've taken a similar approach, but extended it to also include the operating
+    system shell (in DOS this would be <tt>COMMAND.COM</tt>) in ROM as well. So
+    the computer can be booted without any external storage. Which is handy, as
+    at this point I don't have any storage interface yet!
+    </p>
+    <p>
+    The <a href=https://github.com/skaven81/mycpu/tree/master/assembler/lib>OS Library</a>
+    has been built up little by little, without much of a "master plan" to coordinate
+    it. As I added new hardware functions to the CPU and computer, I'd write small
+    test programs and a library to validate that the hardware was working correctly,
+    then move on to the next construction task. The result of this is a bit of a
+    mess, but it's a mess that actually seems to work OK for now.
+    </p>
+    <p>
+    Once I finished principal construction, I started working on the OS shell. This
+    was mostly because as I started adding more peripherals, having the ability to
+    test their behavior using simple <tt>peek</tt> and <tt>poke</tt> commands comes
+    in really handy. And so that's more or less where I started -- I started building
+    up an OS shell environment that could intitialize the CPU and peripherals to
+    sane defaults, run some power-on self test (POST) checks, and drop into an
+    interactive shell. I made sure the shell would behave in an expected way, with
+    the left and right arrow keys, backspace and delete, all functioning as expected.
+    I also made sure that the console could scroll as programs output text beyond
+    the last line of the display.
+    </p>
+    <p>
+    Getting to this point took a surprising amount of code. I have an even deeper
+    respect for the '70s and '80s hackers that managed to cram all of this functionality
+    (and more!) into just a few KB of ROM and RAM back in the day.  As it stands,
+    my "improvisational" and "just in time" approach to building all this stuff
+    has made for some pretty inefficient code, and at the moment the BIOS functions
+    and shell consume nearly 12KiB of ROM. Since the entire ROM is only 16KiB,
+    I expect that I'll have to go back and do some refactoring pretty soon. But maybe
+    I'll get lucky and manage to get the ATA port drivers and FAT16 interface functions
+    crammed into that last 4KiB, which will allow me to start offloading any new
+    code into external binaries stored on removable media.
+    </p>
+  </div>
+</body>
+</html>
