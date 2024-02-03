@@ -1,0 +1,194 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Lessons Learned
+  </div>
+  <div class='section-body'>
+    <h2>Lessons Learned</h2>
+    <p>
+    The Odyssey computer is far, FAR from perfect. It was built (intentionally) in
+    an <i>ad-hoc</i> manner, without much in the way of a high-level plan for how
+    things would all work together, or for how to go from hardware to an OS to
+    working software. There are many places where if I were doing it over again,
+    I'd choose to implement things differently.
+    </p>
+
+    <h3>Video Card</h3>
+    <h4>Allow for background color</h4>
+    <p>
+    If I were doing it again, I'd ditch the "blink" bit in the color byte, and instead have
+    the color byte formatted like this:
+    </p>
+    <table class="bit-table">
+    <tr>
+      <th>7</td>
+      <th>6</td>
+      <th>5</td>
+      <th>4</td>
+      <th>3</td>
+      <th>2</td>
+      <th>1</td>
+      <th>0</td>
+    </tr>
+    <tr>
+      <td colspan=1>crsr</td>
+      <td colspan=1>back-R</td>
+      <td colspan=1>back-G</td>
+      <td colspan=1>back-B</td>
+      <td colspan=1>bright</td>
+      <td colspan=1>fore-R</td>
+      <td colspan=1>fore-G</td>
+      <td colspan=1>fore-B</td>
+    </tr>
+    </table>
+    <p>
+    This would give me 16 foreground colors (8 basic colors with a dim and bright variant
+    of each) along with 8 background colors, and a bit to set for drawing a cursor.
+    </p>
+    <p>
+    It would have been a pretty easy thing to do when I was building the video card. But
+    for some reason I had it in my head that having support for 64 foreground colors and
+    only black as a background color, would be sufficient. But I should have emulated the
+    multitude of color 8-bit computers of the day, which all had support for background
+    colors!
+    </p>
+
+    <h4>Graphics mode</h4>
+    <p>
+    It would have been quite a bit more work, but it would have been nice to implement
+    a proper graphics mode in the video card as well. Today the video card can <i>only</i>
+    draw characters in 8x8 pixel blocks. This requires 4KiB RAM for the character array
+    and 4KiB for the color array, for a 64x64 grid of 8x8 pixel characters (the last four
+    lines are hidden). If I took that same 8KiB of RAM and implemented something like
+    CGA's palette-based 4-color system, I could define the color of each pixel with
+    two bits, and so each byte could store four pixels. With 8KiB RAM, that's enough for
+    32K pixels. A 160x120 pixel display (a quarter of 640x480), is 19,200 pixels, and
+    so would fit in memory.
+    </p>
+    <p>
+    But the more I thought about it, I considered that I could actually do at least as
+    good as that, with more colors, with a software overlay on top of character mode.
+    Consider the 160x120 pixel setup. Each "pixel" is four "real" pixels wide and four
+    "real" pixels tall. So that means each 8x8 character block hold four "pixels".
+    That is only sixteen combinations. A font could be burned to the font ROM that
+    enumerates all sixteen of these combinations as glyphs, then software could handle
+    updating each character to the right glyph when a "pixel" is written. The chief
+    downside to this approach is that all four "pixels" would have to be the same color,
+    as they're part of the same glyph.
+    </p>
+
+    <h4>Full width display</h4>
+    <p>
+    When I designed the video card I thought that I was doing myself a favor by using
+    only power-of-two quantities for things like the character size (8x8) and the
+    character and color arrays (64x64). But this turned out to be pretty limiting
+    in the end. My display can draw 64x60 characters, which is technically more data
+    than a typical 80x25 terminal, but 64 characters is not a lot of width to work
+    with. I totally understand now why the 80 character wide terminal stuck around
+    for so long -- it's <i>just</i> wide enough. 64 is just too narrow.
+    </p>
+    <p>
+    I do still think that my choice to go with 8x8 characters was the right one. A
+    640x480 resolution thus yields 80x60 characters, or 4,800 bytes for the characters.
+    This spills over the 4KiB boundary, but I'm sure that with some additional work
+    I could have made the video card handle it just fine. It would just make the
+    address ranges a little more awkward.
+    </p>
+    <p>
+    And it turns out that being able to move an address around the display by just
+    flipping bits, has been of very little utlity, when compared to how limiting
+    the 64-character-wide display is. I mean, it makes the computer scientist in
+    me grin when I observe that on a 64x60 array, moving around just requires simple
+    bit flips. But in practice, that's now how those operations happen. Instead, they're
+    done with addition and subtraction:
+    <ul>
+        <li>Cursor left: <tt>$addr - 0x0001</tt></li>
+        <li>Cursor right: <tt>$addr + 0x0001</tt></li>
+        <li>Cursor up: <tt>$addr - 0x0040</tt></li>
+        <li>Cursor down: <tt>$addr + 0x0040</tt></li>
+        <li>Char addr to Color addr: <tt>$addr + 0x1000</tt>
+        <li>Color addr to Char addr: <tt>$addr - 0x1000</tt>
+    </ul>
+    <p>
+    Who cares if cursor up/down uses <tt>0x50</tt> (80) instead of <tt>0x40</tt> (64)?
+    And who cares if converting an address between colors and chars uses <tt>0x12c0</tt>
+    instead of <tt>0x1000</tt>? I thought that using power-of-two would simplify these
+    sorts of operations, but it's all the same ADD/SUB operations either way. So I
+    should have just gone with the "non-aligned" memory map and made an 80x60 terminal work.
+    </p>
+
+    <h3>CPU &amp; Instruction Set</h3>
+    <h4>More ALU-accessible Registers</h4>
+    <p>
+    The Odyssey CPU has eight total registers, but only four of those are plumbed to
+    the ALU. The C and D register pairs can helpfully do 16-bit increment and decrement
+    operations, but they lack the ALU flags (overflow, equal, zero) and so the increment/
+    decrement operations must always be backed by some sort of counter in the A or B
+    registers to keep track of how far through the process you are.
+    </p>
+    <p>
+    If I were to do it again, I'd plumb all four 16-bit register pairs (A, B, C, D)
+    to the ALU. This would provide for a more symmetrical instruction set architecture,
+    double the "scratchpad" size for more complex algorithms, and make it much easier
+    to perform long loops that require more than 8 bits of counter.
+    </p>
+    <p>
+    I would also implement all of the registers the way I did with C and D, so that
+    16-bit increment and decrement operations could be performed without the ALU, and
+    make it so that each increment/decrement operation sets the ALU flags.
+    </p>
+
+    <h4>Ensure all registers can write directly to data bus</h4>
+    <p>
+    When I was implementing the ALU, I thought I was being clever by not providing a
+    way for the A and B registers to write directly to the data bus. If I needed
+    any of those registers to write to the data bus, I could just execute an ALU
+    operation (all ALU operations output to the data bus). A simple "identity" ALU
+    operation would be sufficient to put the value on the data bus.
+    </p>
+    <p>
+    But what this did was to create an asymmetry in how the A/B and C/D registers
+    are accessed and used. For example, to push any of the C/D registers onto
+    the stack, it's <tt>PUSH_CL</tt> or <tt>PUSH_DH</tt>.  But for A/B these
+    require ALU operations: <tt>ALUOP_PUSH %A%+%AL%</tt> or <tt>ALUOP_PUSH %B%+%BH%</tt>.
+    Improving the assembler hide this asymmetry can help somewhat, but the fact
+    remains that <tt>PUSH_CL</tt> only takes 3 clocks, while <tt>ALUOP_PUSH<tt> takes
+    4 (and an extra byte of data in the program). Not a huge deal, but it does mean
+    that for tight loops where every clock tick counts, I have to consider whether
+    the data should go into the C/D registers versus the A/B ones (and then also
+    consider that C/D don't have access to the ALU!).
+    </p>
+    <p>
+    If all eight registers could go to the ALU <i>or</i> the data bus, then
+    I'd get the best of both worlds: simple data movement commands like <tt>PUSH</tt>
+    and <tt>POP</tt> and <tt>MOV</tt> could be done on all registers in equal
+    and minimal time. While still allowing everything to use the ALU.
+    </p>
+
+    <h3>OS Library / BIOS</h3>
+    <h4>Terminal interface</h4>
+    <p>
+    The terminal I/O is where I've really butchered the code the most. It was built
+    up in tiny, disparate pieces without much in the way of coordinating behavior
+    or providing a clean and consistent API for programs to use. After all, the video
+    card was the first thing I built, and so code to do things like manipulate the
+    cursor, print text, and scroll the display, were some of the first libraries I
+    wrote, long before I had even considered how the OS, shell, and additional software
+    would interface with it.
+    </p>
+    <p>
+    If I were to go back and write it again, I would start from the perspective of
+    a terminal emulator. Basically just have the BIOS implement a software version
+    of something like a VT220 terminal. Programs could interface to the display
+    using a simple buffer -- just append characters to the buffer and the OS takes
+    care of printing them to the display. ANSI escape sequences would allow for
+    moving the cursor around, changing colors, and clearing the screen. Programs
+    would always have the option to bypass the terminal library by writing directly
+    to the video card framebuffer, which would be how things like games would work.
+    </p>
+  </div>
+</body>
+</html>
