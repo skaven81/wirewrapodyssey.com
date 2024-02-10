@@ -1,0 +1,56 @@
+==================================================================
+https://keybase.io/pkrizak
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of https://wirewrapodyssey.com
+  * I am pkrizak (https://keybase.io/pkrizak) on keybase.
+  * I have a public key ASD3FbVgfl7bHwAfSsVQa5sAyaHPWRu17vq2JTSDdEZmlQo
+
+To do so, I am signing this object:
+
+{
+  "body": {
+    "key": {
+      "eldest_kid": "0120ca6f671cc8452c97a7cb0e0b71f447ba4df9410dce7e1433178f959b926b7c680a",
+      "host": "keybase.io",
+      "kid": "0120f715b5607e5edb1f001f4ac5506b9b00c9a1cf591bb5eefab6253483744666950a",
+      "uid": "e84ca511d63236c0cd9dc6aa7c8a6e19",
+      "username": "pkrizak"
+    },
+    "merkle_root": {
+      "ctime": 1707586593,
+      "hash": "dd366da6781155fe877e0280ec545c7654c43ea4fd12825760f314ab4a14004993c984de948b415ac1e1a9d27c43f7bd67a3051d971e32701b7f49fb1a143d36",
+      "hash_meta": "f316da0c685cde3f47814a05d2ee736e191a54d74f1fcffeca22d76094a43978",
+      "seqno": 25446503
+    },
+    "service": {
+      "entropy": "qUXbJCgMptOJQT1x1PuJczMF",
+      "hostname": "wirewrapodyssey.com",
+      "protocol": "https:"
+    },
+    "type": "web_service_binding",
+    "version": 2
+  },
+  "client": {
+    "name": "keybase.io go client",
+    "version": "6.2.4"
+  },
+  "ctime": 1707586672,
+  "expire_in": 504576000,
+  "prev": "9e8421151a72af9a4faf3b54fd423bfa914ac94d6d2f251fd9eb14bc3ea86c98",
+  "seqno": 37,
+  "tag": "signature"
+}
+
+which yields the signature:
+
+hKRib2R5hqhkZXRhY2hlZMOpaGFzaF90eXBlCqNrZXnEIwEg9xW1YH5e2x8AH0rFUGubAMmhz1kbte76tiU0g3RGZpUKp3BheWxvYWTESpcCJcQgnoQhFRpyr5pPrztU/UI7+pFKyU1tLyUf2esUvD6obJjEIFoBK2kIDYp9yvW8m29OCDB6mJAbZ5lTfdRfzm8tB4UMAgHCo3NpZ8RAasXDe05IEwg98fq+A5siIUtCo5QYopuxRXUMjCSC3eRHeAzb3bljOS/xG9gG/Bn726cfccVTHXDbM1ksEl+aA6hzaWdfdHlwZSCkaGFzaIKkdHlwZQildmFsdWXEIJeazreVgEFkVPVVIpqrp9xX9Z/8BNtfCOauZiOSU6kCo3RhZ80CAqd2ZXJzaW9uAQ==
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/pkrizak
+
+==================================================================
