@@ -35,7 +35,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     So we have a 64x60 grid of characters, arranged in RAM, from the video card's perspective, at
-    <tt>0x0000-0xefff</tt>. Each byte in that range contains an ASCII character that the CPU is asking
+    <tt>0x0000-0x3fff</tt>. Each byte in that range contains an ASCII character that the CPU is asking
     the video card to draw on our behalf. How do we do that in hardware?
     </p>
     <p>
