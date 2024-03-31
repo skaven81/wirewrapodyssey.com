@@ -91,6 +91,50 @@ vim: ts=2 sts=2 sw=2 expandtab
     wave on my oscilloscope across the full frequency band.
     </p>
 
+    <h3>Updated Clock Signal</h3>
+    <p>
+    In March 2024, I made a pretty significant change to the clock signal.  I observed that most of the
+    time that the clock was low, was wasted.  When the clock transitions from low to high, that's when
+    all the action happens, and state changes propagate throughout the board.  Then when the clock
+    transitions from high to low, most of the memory devices treat that as a "commit" trigger.  Then
+    the clock sits for a while in the low state, and upon the next low-to-high transition, a few other
+    devices treat that as a "commit" trigger.
+    </p>
+    <p>
+    With a typical 50% duty cycle clock, the propagation delay after the low-to-high transition, before
+    the next high-to-low transition, is my limiting factor.  With <tt>HC</tt> logic, that appeared to
+    put me somewhere around 1.4 to 1.8 MHz as my maximum clock speed.  Not bad, but it could be better.
+    </p>
+    <p>
+    So I replaced the clock with an updated design that generates a 75% duty cycle, using the design
+    described in <a href=https://www.radiolocman.com/shem/schematics.html?di=64117>this blog post</a>.
+    I only use one NAND gate (and it's not a Schmitt trigger model), as I only need the 75% duty
+    cycle output, and my clock input is coming from the <tt>74x624</tt>.
+    </p>
+    <p>
+    The method of operation is pretty straightforward. The two D-flip-flops are chained together
+    as a 2-bit counter, in such a way that propagation delays guarantee that the output NAND gate
+    will not glitch on the <tt>0b01</tt> to <tt>0b010</tt> transition. The clock is high for
+    <tt>0b00</tt>, <tt>0b01</tt>, and <tt>0b10</tt>, then transitions low on <tt>0b11</tt>. The result
+    is a perfect 75% duty cycle clock.
+    </p>
+    <p>
+    I did run into some problems when I first implemented it.  I have a few places
+    on the board that use flip-flops to synchronize asynchronous write pulses to the clock, and those
+    flip-flops use the <tt>/CLK</tt> (inverted clock) signal as well as the <tt>CLK</tt> (uninverted
+    clock) signal. The circuits glitch if the <tt>/CLK</tt> transitions happen before the <tt>CLK</tt>
+    signal transitions. And when I first implemented the new 75% duty cycle clock, I was using an
+    inverter as a buffer, meaning the "primary" clock was actually <tt>/CLK</tt>, which was inverted
+    again to generate <tt>CLK</tt>.  This didn't work.  So I had to do some rewiring to ensure that
+    the primary clock was "first", then inverted to generate <tt>/CLK</tt>.
+    </p>
+    <p>
+    If I were doing this all again from scratch, I would come up with a more comprehensive solution
+    for clock generation and distribution, and perhaps implement two clocks that are somewhat
+    out of phase with each other, to have a more reliable way of generating asynchronous write pulses
+    at the edges of the clock, without needing so much support circuitry around each module.
+    </p>
+
     <h3>Reset Signal</h3>
     <p>
     Next is the <tt>/RST</tt> signal. There are a few requirements:
