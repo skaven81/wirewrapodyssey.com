@@ -227,6 +227,64 @@ vim: ts=2 sts=2 sw=2 expandtab
     <tt>IRQMASK=1</tt>). If somehow this state is achieved, ALU operations write their status flags
     to the backup/high side of the status register, not the primary/low side.
     </p>
+
+    <h3>Safely entering the interrupt handler</h3>
+    <p>
+    Ever since adding the <a href="javascript:show_content('periph-serial')">UART peripheral</a>, 
+    the Odyssey was plagued with sporadic crashes, particularly when reading long streams of data
+    from the serial port. Analysis of reads and writes to and from the UART revealed that I was
+    violating the timing requirements of the chip. I fixed that, but the crashes remained. I hooked
+    up my logic analyzer and configured the trigger such that it would fire any time the <tt class=register>PC</tt>
+    got set to a value outside the executable code range. This in turn revealed that the crashes
+    were occurring when a <tt>RETI</tt> instruction would execute with an invalid return address.
+    Scrolling further back in the trace to the <tt>IRQ</tt> instruction that was being returned from,
+    showed an odd sequence of events. I'm using arbitrary addresses here to demonstrate what I saw.
+    <ul>
+      <li><tt>0x1d47</tt> <tt>POP_BH</tt> - at the end of a typical function, registers that were
+        saved to the stack are being popped back into place</li>
+      <li><tt>0x1d48</tt> <tt>POP_BL</tt></li>
+      <li><tt>0x1d49</tt> <tt>POP_CH</tt></li>
+      <li><tt>0x1d4a</tt> <tt>POP_CL</tt></li>
+      <li><tt>0x1d4b</tt> <tt style="text-color: red">OPCODE 0xFE</tt> (should be <tt>POP_DH</tt>)</li>
+      <li><tt>0x1d4c</tt> <tt>IRQ</tt> - interrupt!</li>
+      <li>... interrupt handler executes</li>
+      <li><tt>RETI</tt> instruction returns to <tt>0x1d4c</tt></li>
+      <li><tt>0x1d4c</tt> <tt>POP_DL</tt></li>
+      <li><tt>0x1d4d</tt> <tt>RET</tt> - Jumps to an invalid address and CRASH!!</li>
+    </ul>
+    Some invalid opcode <tt>0xFE</tt> was being executed just before an <tt>IRQ</tt> (which is <tt>0xEE</tt>)
+    instruction. And that was causing a main program instruction to be skipped!  The skipped instruction
+    in this case was a <tt>POP</tt>, which meant that when the <tt>RET</tt> was called, the return address
+    wasn't on the top of the stack, instead some value that was supposed to be restored to a register
+    was on the top of the stack.  It also means that (in this example) <tt class=register>DL</tt> is corrupt
+    as well, as it got the wrong value popped into it.
+    </p>
+    <p>
+    Further analysis with the logic analyzer in timing mode, revealed that these "skipped instruction"
+    events all had a common thread -- they all occurred when the <tt>IRQOP</tt> signal was asserted
+    shortly before the rising clock edge. Once I saw that, I knew I had found the culprit!  What was
+    happening was that just as the next opcode was about to be written to the <tt class=register>OPCODE</tt>
+    register, the <tt>IRQOP</tt> signal would be asserted, and propagation delays would cause the
+    wrong value (<tt>0xFE</tt> in this example, instead of <tt>0xEE</tt> or the next real opcode) to
+    be latched into the <tt class=register>OPCODE</tt> register.
+    </p>
+    <p>
+    To correct this, I'd need to prevent the <tt>IRQOP</tt> signal from transitioning too close to
+    the rising clock edge. Fortunately, the work I had recently done in creating "slow" read and
+    write instructions for the UART, meant that there was a spare D-flip-flop on the board, configured
+    to latch on the <i>falling</i> clock edge.  This would do just fine -- I could send the original
+    <tt>IRQOP</tt> signal into the D-flip-flop's input, and the output (which I'm calling <tt>IRQOP-L</tt>
+    for "latched") would only ever change on the falling clock edge, around 125ns before the next
+    opcode would be written. That's plenty of time for the IRQOP multiplexer's propagation to
+    complete, and ensure that a stable value is always written to the <tt class=register>OPCODE</tt>
+    register.
+    </p>
+    <p>
+    I wired this up (only required removing and replacing five wires) and it worked! The Odyssey
+    is now perfectly stable when handling any kind of interrupts, even a high rate of interrupts
+    like when using the UART and moving a lot of data back and forth.
+    </p>
   </div>
+
 </body>
 </html>

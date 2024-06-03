@@ -114,6 +114,59 @@ vim: ts=2 sts=2 sw=2 expandtab
     modern computer over the serial connection
     </p>
 
+    <h3>Fixing flaky reads and writes</h3>
+    <p>
+    A problem that I faced occasionally after adding the UART to the Odyssey, was receiving or transmitting
+    corrupted data. The problem would go away if I clocked the Odyssey down very low -- around 1MHz or
+    so. But once I updated the <a href="javascript:show_content('arch-clock-reset')">Clock Generation</a>
+    circuitry to create a 75% duty cycle clock in an effort to allow for higher clock speeds, the UART
+    stopped working entirely. Clearly I had a timing problem.
+    </p>
+    <p>
+    Timing analysis of the UART's <tt>/CS0</tt>, <tt>/RD</tt>, and <tt>/WR</tt> signals, showed that
+    indeed, I was grossly violating the timing diagram shown in the datasheet. In particular, I was
+    not holding the address and data lines stable long enough before and after the <tt>/RD</tt> or
+    </tt>/WR</tt> transition.
+    </p>
+    <p>
+    Fixing this was rather tricky. What I needed was "slow" read and write opcodes, that would
+    spread the read or write process out over multiple clock cycles. For example, a "slow ST"
+    looks like this:
+    <ol>
+      <li>IncrementPC (PC now points to high byte of target address)</li>
+      <li>AddrBusPC WriteTAH IncrementPC</li>
+      <li>AddrBusPC WriteTAL IncrementPC (PC now points to data byte)</li>
+      <li>AddrBusPC WriteTD IncrementPC</li>
+      <li>AddrBusTA DataBusTD (present the address to the UART, which allows <tt>/CS0</tt> to be asserted</li>
+      <li>AddrBusTA DataBusTD WriteRAM (assert <tt>/WR</tt> in response to <tt>/WRAM</tt>)</li>
+      <li>AddrBusTA DataBusTD (keep address presented, keeping <tt>/CS0</tt> low after <tt>/WR</tt> has reset)</li>
+      <li>NextInstruction</li>
+    </ol>
+    I created a set of "slow" instructions like this that all had the same consistent behavior:
+    <ul>
+      <li>at microcode sequence 4, the address lines are set</li>
+      <li>at microcode sequence 5, the <tt>/WRAM</tt> signal is asserted (if a write instruction), or the target register is written (if a read instruction)</li>
+      <li>at microcode sequence 6, the address lines remain set</li>
+    </ul>
+    Using this convention, I was able to update the UART support circuitry to include five
+    D-flip-flops that latch on the falling clock edge. These flip-flops store the <tt>ADDR0</tt>,
+    <tt>ADDR1</tt>, <tt>/CS0</tt>, and the asynchronous generated signals for <tt>/RD</tt> and <tt>/WR</tt>
+    (which I now call <tt>/RDGEN</tt> and <tt>/WRGEN</tt>).  The <tt>/RDGEN</tt> and <tt>/WRGEN</tt> signals
+    take input from the <tt>/CS0</tt> latched output, ensuring that they only transition one full
+    clock cycle after the address lines are set up. I also used a spare 4-input OR gate to generate
+    a <tt>SEQ45</tt> signal that is asserted only during microcode sequences 4 and 5. The <tt>SEQ45</tt>
+    signal is also used to gate the assertion of <tt>/WRGEN</tt> and <tt>/RDGEN</tt>, ensuring that
+    a stray write or read does not occur in "non-slow" opcodes and cause corruption.
+    </p>
+    <p>
+    You might ask, if the address lines remained stable across microcode sequences 4-6, why are
+    the D-flip-flops needed?  Well, because it turns out that when the clock ticks, and the <tt>SEQ</tt>
+    signal is incremented, there is a non-trivial propagation delay of control logic. During that
+    propagation time, the address and data buses can glitch, which in turn can cause timing
+    violations. By adding the flip-flops, and intentionally latching them on the <tt>falling</tt>
+    clock edge, I am able to allow all the propagation glitches to settle before "saving" the
+    current state across the next <tt>SEQ</tt> update and resulting glitches.
+    </p>
   </div>
 </body>
 </html>
