@@ -155,7 +155,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     the stack, it's <tt>PUSH_CL</tt> or <tt>PUSH_DH</tt>.  But for A/B these
     require ALU operations: <tt>ALUOP_PUSH %A%+%AL%</tt> or <tt>ALUOP_PUSH %B%+%BH%</tt>.
     Improving the assembler hide this asymmetry can help somewhat, but the fact
-    remains that <tt>PUSH_CL</tt> only takes 3 clocks, while <tt>ALUOP_PUSH<tt> takes
+    remains that <tt>PUSH_CL</tt> only takes 3 clocks, while <tt>ALUOP_PUSH</tt> takes
     4 (and an extra byte of data in the program). Not a huge deal, but it does mean
     that for tight loops where every clock tick counts, I have to consider whether
     the data should go into the C/D registers versus the A/B ones (and then also
