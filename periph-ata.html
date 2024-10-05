@@ -12,7 +12,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <h3>Overview</h3>
     <p>
     The final (for now, at least) peripheral I plan to add to the Odyssey computer is
-    an ATA (AT Attachment) port, sometimes called an IDE (integrated drive electronics)
+    an ATA (AT Attachment) port, often called an IDE (integrated drive electronics)
     port. You know, the 40-pin port that you'd hook a hard drive to in 286, 386, 486,
     Slot 1/A, and Socket 7 systems.
     </p>
@@ -41,22 +41,115 @@ vim: ts=2 sts=2 sw=2 expandtab
     and the low 8 bits onto the data bus. The CPU can then read from the register to
     grab the high 8 bits. The second challenge is timing. In the blog post, the author
     was interfacing an IDE device to a Z80 CPU, which resulted in some Z80-specific
-    glue logic. I'll have to come up with Odyssey-specific logic to ensure that the
-    timing requirements are met. I may also need to add some custom opcodes that hold
-    the data and address lines for extra clock cycles to ensure all the timing works right.
+    glue logic. My implementation required Odyssey-specific control logic to ensure the
+    timing requirements were met.
     </p>
 
-    <h3>Implementation: in progress!</h3>
+    <h3>Implementation</h3>
     <p>
-    I haven't started actually desiging or building the ATA port yet. When I do, the plan
-    is to use an SD-to-IDE adapter as the primary disk drive for the Odyssey. But since
-    all IDE drives (at least, those that support PIO-0 mode) should work, in theory I could
-    hook up an old IDE hard drive, or even a CD-ROM to the port and have it work. That
-    would be a fun experiment! And the ATA port allows for two drives on the same bus,
-    so I actually could have both removable media (an SD card or CD-ROM) and fixed media
-    (an IDE hard drive) both working simultaneously! 
+    The implementation I went with ended up straying pretty far from the blog post linked above.
+    Basically the only common thing was the use of 8-bit registers to store the high byte
+    of the 16-bit ATA bus when reading and writing.
     </p>
 
+    <figure class='figure-container'>
+      <a href="img/ata_port_circuit.png" target=_blank><img src="img/ata_port_circuit.png"></a>
+      <figcaption class='figure-caption'>
+        Schematic of the ATA glue logic. Click for fullsize.
+      </figcaption>
+    </figure>
+
+    <p>
+    There's a lot going on in that schematic. The general idea is that the <tt>0xc300-0xc3ff</tt>
+    address range is "owned" by the ATA port circuitry.  The big NOR gate at the top left
+    generates <tt>ADDR_C3</tt> and <tt>/ADDR_C3</tt> signals which are used to gate other aspects
+    of the circuit.  In the second row, you can see the array of AND and NAND gates used to generate
+    the glue logic for the ATA control signals.  <tt>/CS0gen</tt> is low when address is between
+    <tt>0xc300-0xc307</tt> and <tt>/CS1gen</tt> is low when address is between <tt>0xc308-0xc30f</tt>.  
+    The <tt>/HIWR</tt> and <tt>/HIRD</tt> (write/read from high byte register) signals are asserted
+    for any address between <tt>0xc310-0xc31f</tt> and depending on whether the <tt>/WRAM</tt> signal
+    is asserted. The ATA <tt>/WRgen</tt> and <tt>/RDgen</tt> signals (for reading/writing to the
+    ATA port) are similar, but are gated by <tt>SEQ45</tt>, which I'll discuss in a bit.
+    </p>
+
+    <p>
+    The rest of the circuitry is all about getting the timing right.  And this was the hardest
+    part of getting the ATA port to work.  I found that a common constraint for chips of this
+    era is that the read or write signals will latch the address on their falling edge, then
+    write (or read) the data on their rising edge.  Further, many require that the chip select signal
+    not be released for some period of time after the write signal is released.
+    </p>
+
+    <p>
+    So I came up with a set of "slow" Odyssey instructions that spread read and write signals
+    over multiple clocks, to allow for logic in the peripheral to assert and release internal
+    signals over those multiple clocks.  All of these "slow" instructions guarantee timing
+    for reads and writes.
+    </p>
+
+    <p>
+    For writes:
+    <ul>
+      <li><tt>SEQ4</tt> - peripheral should latch the address and data</li>
+      <li><tt>SEQ5</tt> - <tt>/WRAM</tt> will be asserted</li>
+      <li><tt>SEQ6</tt> - address and data remain asserted</li>
+    </ul>
+    </p>
+    <p>
+    For reads:
+    <ul>
+      <li><tt>SEQ3</tt> - address is valid</li>
+      <li><tt>SEQ4</tt> - address is valid</li>
+      <li><tt>SEQ5</tt> - address is valid - CPU will commit value on data bus at end of clock</li>
+      <li><tt>SEQ6</tt> - address is valid</li>
+    </ul>
+    </p>
+
+    <p>
+    The peripheral thus needs to know which sequence number it is in, to know when to perform
+    internal latches.  This is accomplished (for the ATA port at least) with the <tt>SEQ45</tt>
+    signal, which is asserted when the sequence register is value 4 or 5.  I specifically chose for
+    the "commit data" step in the "slow" instructions to be at sequence number 5, because the
+    transition between 4 (<tt>0b100</tt>) and 5 (<tt>0b101</tt>) is glitchless.  That means
+    a signal can be created (<tt>SEQ45</tt>) that is asserted upon entering sequence number 4
+    and then stays asserted (without glitching) through sequence number 5, before being cleared.
+    </p>
+
+    <p>
+    The <tt>SEQ45</tt> signal is what allows (through all the glue logic shown above) the timing
+    to work.  The timing is shown in this rather complex hand-drawn timing diagram:
+    </p>
+
+    <figure class='figure-container'>
+      <a href="img/ata_timing.png" target=_blank><img src="img/ata_timing.png"></a>
+      <figcaption class='figure-caption'>
+        ATA port signal timing. Click for fullsize.
+      </figcaption>
+    </figure>
+
+    <p>
+    The timing diagram can be read as follows:
+    <ul>
+      <li><tt>SEQ</tt> - the microcode sequence number</li>
+      <li><tt>CLK</tt> - the clock signal</li>
+      <li><tt>ADDR</tt> - the address bus. <tt>X</tt> represents periods where the address bus might
+                          not be stable, and <tt>R</tt> and <tt>W</tt> indicate when the address bus
+                          is stable for reads and writes, accordingly.</li>
+      <li><tt>ATA ADDR</tt> - the ATA port's address bus, same <tt>X</tt>, <tt>R</tt>, and <tt>W</tt>
+                          meaning as the CPU address bus.</li>
+      <li><tt>/WRAM</tt> - when the <tt>/WRAM</tt> signal is low (for writes; it stays high for reads)</li>
+      <li><tt>ADDR_C3_buf</tt> - the buffered <tt>ADDR_C3</tt> signal</li>
+      <li><tt>/CS0</tt>, <tt>/RD</tt>, <tt>/WR</tt> - the ATA port signals</li>
+      <li><tt>DATA</tt> - the CPU data bus on read and write operations. <tt>0</tt> indicates valid data on the bus.</li>
+      <li><tt>ATA HI</tt> - the ATA bus high byte status. <tt>0</tt> indicates valid data on the bus.</li>
+    </ul>
+    The dotted lines running vertically mark the critical timing for reads (left) and writes (right).
+    What the resulting timing ensures is that the <tt>/CS0</tt> (or <tt>/CS1</tt>) signal is asserted
+    first, then a clock later, the <tt>/RD</tt> or </tt>/WR</tt> signal is asserted. After being released,
+    a clock cycle passes before <tt>/CS0</tt> or <tt>/CS1</tt> are released.  This conforms (enough) to
+    the "programmed I/O" (PIO) mode of ATA bus operation.
+    </p>
+ 
   </div>
 </body>
 </html>
