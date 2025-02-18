@@ -1,0 +1,308 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Software: ODY Executables
+  </div>
+  <div class='section-body'>
+    <h2>Software: ODY Executables</h2>
+    <p>
+    A huge advancement in the Odyssey was completed in early 2025, just in time
+    for the 2025 <a href=https://vcfsocal.com>Vintage Computer Festival SoCal</a>.
+    The Odyssey now supports running <i>executables</i> from disk, instead of
+    having everything run in program ROM.  This may not sound like much, but it
+    was a MASSIVE amount of work to get to this point.
+    </p>
+    <h3>The Problem: how to make executables work?</h3>
+    <p>
+    It's helpful to walk the dependency tree backward from a place where executables
+    actually work, to see what needs to be done:
+    <ul>
+      <li>Odyssey OS shell can run executable files</li>
+      <ul>
+        <li>Enumerate FAT16 directories to find executable files</li>
+        <ul>
+          <li>Compute FAT16 offsets (clusters, directories, sectors)</li>
+          <li>Interface with ATA device (read sectors given an LBA address)</li>
+        </ul>
+        <li>Localize machine instructions to arbitrary memory locations</li>
+        <ul>
+          <li>Include localization data in executable</li>
+          <li>Differentiate between calls to library code in ROM, and internal locations in the program</li>
+        </ul>
+      </ul>
+    </ul>
+    </p>
+    <p>
+    Getting from "programs all run in ROM" to "the Odyssey boots from ROM then runs
+    programs from files on disk" required significant updates to every component:
+    <ul>
+      <li><b>Hardware:</b> An ATA port is needed to interface with a disk drive</li>
+      <li><b>Assembler:</b> The assembler has to be able to generate executable files, on top
+        of its existing ability to generate raw machine code blobs for the program ROM.  The
+        assembler has to seamlessly forward along memory addresses of function entrypoints
+        to multiple builds across multiple files, instead of doing it all at once when
+        building the program ROM.</li>
+      <li><b>Operating System/BIOS:</b> The OdysseyOS has to be redesigned to function
+        in terms of "booting from ROM then transitioning to disk" instead of just blindly
+        starting execution at memory address <tt>0x0000</tt>. This transitions OdysseyOS
+        into a system reminisicent of the IBM PC, where the BIOS (ROM) contained platform-
+        specific functions for doing things like interfacing with the disk drives, keyboard,
+        and display, and the BIOS's principal job on system startup was to load an OS
+        from disk (such as MS-DOS <tt>COMMAND.COM</tt>) and then get out of the way.</li>
+    </ul>
+    </p>
+
+    <h3>Hardware: the ATA port</h3>
+    <p>
+    This is already covered in depth in the <a href='javascript:show_content("periph-ata");'>Peripherals - ATA</a>
+    section. So I won't repeat that content here. What I will add for reference, however,
+    is a link to the <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/ata.asm>driver code for the ATA port</a>.
+    I also want to link to this excellent guide on interfacing an ATA port with an 8-bit
+    computer: <a href=https://blog.retroleum.co.uk/electronics-articles/an-8-bit-ide-interface/>
+    An 8-bit IDE interface @ Retroleum</a>. Also helpful was the offical ATA spec:
+    <a href=https://people.freebsd.org/~imp/asiabsdcon2015/works/d2161r5-ATAATAPI_Command_Set_-_3.pdf>PDF</a>.
+    </p>
+    <p>
+    Some key take-aways about interfacing with an ATA port:
+    <ul>
+      <li>While individual bytes read and written are in the expected format with
+        most-significant bit at the beginning of the byte, multi-byte formats
+        (WORD, DWORD, QWORD) are in little-endian format, meaning that as you
+        move through addresses in ascending order, the data is stored least-significant
+        byte first. See page 15 of the ATA spec PDF linked above for a detailed diagram.</li>
+      <li>All read and write operations happen in units of 512 bytes (256 16-byte
+        read/write operations)</li>
+      <li>Linear Block Addressing (LBA) should be supported by virtually any
+        IDE device you might want to use today.  Don't bother with CHS addressing.
+        However, note that LBA addresses are 28 bits (if using devices under ~128GB)
+        which means your 8-bit computer has to be able to add and subtract QWORD sized
+        (32-bit) numbers, which may require some tricky coding.</li>
+    </ul>
+    </p>
+    <p>
+    Ultimately, the ATA interface code I've written so far for the Odyssey only supports
+    a few functions, all of which are read-only:
+    <ul>
+      <li><tt>:ata_identify</tt> - sends the ATA "ID" command to the drive and
+        writes the 512-byte identification data to an address in memory</li>
+      <li><tt>:ata_identify_string</tt> - sends the ATA "ID" command to the drive
+        and returns a string identifying the type of drive. This is used during
+        the boot sequence to display the attached drives.</li>
+      <li><tt>:ata_read_lba</tt> - given a 28-bit LBA, sends a read command to
+        the device and writes the 512-byte sector into RAM.</li>
+    </ul>
+    These functions (particularly <tt>:ata_read_lba</tt>) are the building blocks
+    needed for making FAT16 work.
+    </p>
+
+    <h3>Software: FAT16 handling</h3>
+    <p>
+    After making sure I was able to detect and read reliably from attached IDE
+    devices, I needed to move up one layer in the abstraction stack. This meant
+    adding support for FAT16.
+    </p>
+    <p>
+    First, I had to learn how FAT16 actually works.  Fortunately, I found this
+    incredible site: <a href=http://www.maverick-os.dk/FileSystemFormats/FAT16_FileSystem.html>
+    Maverick - FAT16 Filesystem</a> that explains everything in a concise and
+    approachable format. Even more helpful, it includes a table of formulas used
+    to compute various useful values, such as where the data region starts, where
+    the root directory is located, etc.
+    </p>
+    <p>
+    The gist of how FAT16 works is that the first sector of the filesystem (which
+    is LBA=0 for the Odyssey since I'm not using partitions or anything) is the
+    "Boot Sector" which contains all the metadata about the filesystem itself, such
+    as how many sectors per cluster, how many root directory entries there are,
+    etc. Once the computer has read the boot sector, it can compute the LBA of
+    any other part of the filesystem, such as the beginning of the file allocation
+    table, the start of the data region, or the root directory.
+    </p>
+    <p>
+    Everything in FAT16 other than the root directory is referenced by a 16-bit
+    <i>cluster</i>. This number can be translated into an LBA address to read it
+    (each cluster has multiple sectors). Once the data in a cluster is exhausted,
+    the file allocation table is referenced. The cluster number can be translated
+    into an offset in the file allocation table, where a word can be read that
+    contains the number of the <i>next</i> cluster, or <tt>0xfff8-0xffff</tt>
+    if that's the end of the file.  There are other special cluster codes in the
+    file allocation table to mark empty/unused clusters, bad sectors, etc. But
+    for the purposes of reading from the filesystem, all that is needed is to
+    be able to start with a cluster number where the file begins, then reference
+    the FAT to locate the next cluster, and so on.
+    </p>
+    <p>
+    Directories in FAT16 are 32-byte records that reside in clusters (or if root
+    directory entries, in the "root directory region" which isn't actually a
+    cluster, but is conventionally referred to as cluster zero). So to read a
+    directory, you take the cluster number of the directory, translate that to
+    an LBA, and begin reading sectors. Directory entries each contain the filename,
+    file size, timestamp data, a metadata byte that indicates if the entry refers
+    to a directory, a file, a volume label, etc., and (most importantly) a
+    cluster number that marks the beginning of that object in the filesystem.
+    </p>
+    <p>
+    To interface with FAT16, I had to write a ton of code:
+    <ul>
+      <li>Mounting a FAT16 filesystem: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_mount.asm>fat16_mount.asm</a></li>
+      <ul>
+        <li><tt>:fat16_mount</tt> - given the LBA (usually zero) of a FAT16 filesystem, will
+          read the boot sector, extract all the pertinent structural data, then
+          pre-compute some useful data about the filesystem. A "friendly" version
+          of this data is then stored in a 128-byte memory region that I call
+          a "filesystem handle", and is used by most other FAT16 interface functions.</li>
+        <li><tt>:fat16_print</tt> - given the address of a filesystem handle, will print
+          out all the extracted data about the filesystem.</li>
+      </ul>
+      <li>Calculating FAT16 things: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_calc.asm>fat16_calc.asm</a></li>
+      <ul>
+        <li><tt>:fat16_cluster_to_lba</tt> - given a 16-bit cluster number and a filesystem handle address, returns the LBA of the cluster on disk</li>
+        <li><tt>:fat16_lba_to_cluster</tt> - same as above, but in reverse</li>
+        <li><tt>:fat16_next_cluster</tt> - given a 16-bit cluster number and a filesystem handle address, returns the next cluster of the file</li>
+      </ul>
+      <li>FAT16 directory parsing: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_dirent.asm>fat16_dirent.asm</a></li>
+      <ul>
+        <li><tt>:fat16_dirent_filename</tt> - given the address of a 32-bit directory entry, returns the filename as a string</li>
+        <li><tt>:fat16_dirent_attribute</tt> - same, but returns the attribute byte</li>
+        <li><tt>:fat16_dirent_cluster</tt> - same, but returns the 16-bit starting cluster</li>
+        <li>...plus some additional utility functions for returning a string representing a directory entry, for implementing a <tt>dir</tt> command</li>
+      </ul>
+      <li>FAT16 directory walking: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_dir.asm>fat16_dir.asm</a></li>
+      <ul>
+        <li><tt>:fat16_dirwalk_start</tt> and <tt>:fat16_dirwalk_next</tt> and <tt>:fat16_dirwalk_end</tt> -
+          given a starting cluster number of the directory, allows iteratively walking through
+          a directory, with each call to <tt>:fat16_dirwalk_next</tt> returning the memory address
+          of a 32-byte directory entry (which in turn can be parsed using the "dirent" functions
+          above).</li>
+        <li><tt>:fat16_dir_find</tt> - utility function that uses the dirwalk method above to locate
+          a specific file or directory in a directory, and returns its 32-byte directory entry if
+          found.</li>
+      </ul>
+      <li>FAT16 file reading: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_readfile.asm>fat16_readfile.asm</a></li>
+      <ul>
+        <li><tt>:fat16_readfile</tt> - given the address of a filesystem handle and the address
+          of a directory entry, reads the file referenced by the directory entry into memory,
+          iterating through all sectors of each cluster and all clusters of the file. It uses
+          the filesize in the directory entry to limit reading to the nearest 512-byte sector
+          size rather than the next whole cluster.</li>
+      </ul>
+    </ul>
+    </p>
+    <p>
+    Once I had all this code working and tested (which was no easy feat -- it took months of
+    painstaking testing and analysis to make sure I was computing the correct values for all
+    these jumps around in the filesystem), I was ready to start working on actually implementing
+    an executable file format.
+    </p>
+
+    <h3>Assembler: ODY executable format</h3>
+    <p>
+    When considering how I should structure my executable file format, I wanted to keep things
+    simple. So I narrowed down what I wanted to do with executables down to the smallest set
+    of features I could think of that would work:
+    <ol>
+      <li>Executables should be able to tell the operating system that they should be loaded
+        into main memory versus extended memory.  Programs that make extensive use of main memory
+        might need to be loaded into extended memory, but doing so limits the ability to
+        utilize extended memory (as one or both of the extended memory windows will be held
+        by the running program). Meanwhile, programs that need to make use of extended memory,
+        or that wouldn't fit in the 4k or 8k extended memory window, would need to reside in
+        main memory.</li>
+      <li>Executables must be relocatable to anywhere in memory. As the CPU executes code,
+        when it encounters an instruction with an address, such as a <tt>JMP</tt> or <tt>CALL</tt>,
+        the address needs to be corrected so that it points to the right location, given
+        that the executable is not based at address <tt>0x0000</tt> like the ROM is. Thus
+        the executable must contain a table of such addresses that need to be rewritten at
+        execution time.</li>
+      <li>Executables must be able to make function calls to library code that lives outside
+        the program (most likely in ROM). The <tt>CALL</tt> instructions to these functions
+        must not be "localized" to the executable's memory location.</li>
+    </ol>
+    </p>
+    <p>
+    I accomplished this by adding some additional features to the <a href=https://github.com/skaven81/mycpu/blob/master/assembler/assembler.py>
+    assembler</a>:
+    <ul>
+      <li>The assembler can now generate a <i>symbol table</i> which contains the memory
+        offsets of important assembler features such as colon-prefixed <tt>:functions</tt>,
+        <tt>$variables</tt>, and includes initialization data for the assembler so that
+        assembly of some other source using that symbol table can start off as if it had
+        just finished the primary (ROM) assembly.</li>
+      <li>The assembler can generate an <tt>ODY</tt> executable which is really just the
+        assembled machine code, prefixed with a header:</li>
+      <ul>
+        <li>bytes 0, 1, 2: the characters 'O', 'D', 'Y'</li>
+        <li>byte 3: a "flag" byte that tells the operating system where the executable
+          should be loaded into memory. This uses two bits, with six bits remaining for
+          future features as needed.</li>
+        <li>bytes 4-5: a 16-bit word containing the number of address rewrites needed
+          in the program. This is the length of the array starting at byte 6, and may be zero.</li>
+        <li>bytes 6+: any address rewrites are encoded as 16-bit words in this section.
+          The value in each item in the array is the offset in the machine code where
+          an address rewrite is needed. When the operating system seeks to that offset
+          in the program, it will find a "zero-based" offset already present. That value
+          is to be read, and the address of the first byte of the program added, with the
+          resulting value written back to that location.</li>
+        <li>The machine code for the program follows the address rewrite array.</li>
+      </ul>
+    </ul>
+    </p>
+    <p>
+    With the assembler able to write <tt>ODY</tt> files, a corresponding set of library
+    functions were written into the operating system code in <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_odyexe.asm>
+    fat16_odyexe.asm</a>.
+    <ul>
+      <li><tt>:fat16_inspect_ody</tt> - reads the first 6 bytes of a file and makes sure that
+        it is actually an ODY executable. Returns the flag byte so the OS can allocate memory
+        at the right location for the rest of the executable.</li>
+      <li><tt>:fat16_localize_ody</tt> - once the OS has loaded the entire executable into
+        memory (using the <tt>:fat16_readfile</tt> function above) this function is called
+        to perform the address rewrites in the executable. When done, it returns the
+        address of the first byte of the program, which can be used with the <tt>CALL_D</tt>
+        instruction to call the program.</li>
+    </ul>
+    </p>
+
+    <h3>Operating System: OdysseyOS redesign</h3>
+    <p>
+    With all the above tooling in place, the operating system could be rewritten to behave
+    more like a typical computer, where it boots initially from ROM, then transfers control
+    of the system to an operating system which resides on disk. The boot sequence, which is
+    in <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/00-main.asm>00-main.asm</a>,
+    performs the following steps:
+    <ol>
+      <li>Initialize core system functions, such as initializing the memory allocator, the
+        heap, and the interrput vectors</li>
+      <li>Performs an extended memory test</li>
+      <li>Probes the ATA bus for attached devices</li>
+      <li>Allocates global memory regions to store filesystem handles for devices 0 (master) and 1 (slave) on the ATA bus</li>
+      <li>Mounts drive 0 on the ATA bus</li>
+      <li>Looks for a file named <tt>SYSTEM.ODY</tt> in the root directory of the drive</li>
+      <li>Loads the file into memory, performs ODY relocation, and executes it</li>
+    </ol>
+    This sequence means that the BIOS/ROM no longer needs code in it for any commands, a shell,
+    or anything other than the static sequence of "booting" the machine. Everything else can
+    be in <tt>SYSTEM.ODY</tt>. However, since RAM is scarce and ROM is already there, the ROM
+    still contains all of the <a href=https://github.com/skaven81/mycpu/tree/master/assembler/os_shell/lib>
+    library code</a> so that ODY executables don't have to include it themselves.
+    </p>
+    <p>
+    The <a href=https://github.com/skaven81/mycpu/tree/master/assembler/os_shell/system><tt>SYSTEM.ODY</tt></a>
+    executable is really just a slight rework of the same shell code I was using before in the
+    early ROM-only versions of the OdysseyOS. It will get improvements over time, but the
+    important thing is that instead of all the commands it can execute being compiled into one giant
+    monolithic binary, I can now break all those commands out into their own ODY executables that
+    are stored on disk alongside <tt>SYSTEM.ODY</tt>.  The <tt>SYSTEM.ODY</tt> shell itself has
+    code so that typing a command that isn't one of the built-ins, results in a scan of the
+    filesystem to locate an ODY file that matches the command name.  If found, that executable
+    is loaded and executed, just like the BIOS loaded and executed <tt>SYSTEM.ODY</tt> itself.
+    Due to the nature of nested <tt>CALL</tt> instructions, it's possible to return from an
+    executable with a simple <tt>RET</tt> instruction, returning control back to the OdysseyOS
+    shell in <tt>SYSTEM.ODY</tt>.
+    </p>
+  </div>
+</body>
+</html>
