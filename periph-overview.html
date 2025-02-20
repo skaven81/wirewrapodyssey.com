@@ -42,12 +42,13 @@ vim: ts=2 sts=2 sw=2 expandtab
         used when reading or writing from <tt>0xd</tt> or <tt>0xe</tt> addresses, while the
         lower twelve bits come from the CPU address bus. Having two configurable "windows" into
         the same 1MiB of extended RAM makes for some interesting possibilities.</li>
-      <li><a href="javascript:show_content('periph-ata')">ATA Port</a> - Not yet implemented,
-        but planned for 2024. The original ATA bus specification is simple enough that it can
+      <li><a href="javascript:show_content('periph-ata')">ATA Port</a> - Implemented in late 2024.
+        The original ATA bus specification is simple enough that it can
         be implemented with some glue logic. The main complication is that reads and writes
-        are all with 16-bit data values. But once implemented, it should be possible to read
+        are all with 16-bit data values. Now that it is implemented, it is possible to read
         and write from essentially any ATA-compliant device, such as compact flash cards
-        and even old hard drives.</li>
+        and even old hard drives. It has also allowed the OdysseyOS to be redesigned so that
+        it boots into a disk-based OS like a "normal" computer.</li>
     </ul>
     </p>
   </div>
