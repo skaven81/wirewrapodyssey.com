@@ -149,6 +149,21 @@ vim: ts=2 sts=2 sw=2 expandtab
     a clock cycle passes before <tt>/CS0</tt> or <tt>/CS1</tt> are released.  This conforms (enough) to
     the "programmed I/O" (PIO) mode of ATA bus operation.
     </p>
+
+    <h3>Driver Software</h3>
+
+    <p>
+    Once the ATA port was implemented, I needed to write driver software in the OdysseyOS
+    to support reading and writing data from attached devices.  The ATA protocol itself
+    is straightforward, but the way that data is encoded is definitely not, since numeric
+    values are stored in <i>little-endian</i> format, while the Odyssey is a <i>big-endian</i>
+    architecture. This meant a lot of translation code to correctly pull data out of the
+    returned data from things like the ATA ID command and FAT16 metadata regions.
+    </p>
+    <p>
+    You can continue reading about the software implementation for the ATA port by
+    visiting <a href="javascript:show_content('sw-ody')">Bootloader & ODY Executables</a>.
+    </p>
  
   </div>
 </body>
