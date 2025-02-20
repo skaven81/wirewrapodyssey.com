@@ -357,15 +357,24 @@ vim: ts=2 sts=2 sw=2 expandtab
         of the 80s and early 90s. With this approach I could get an effective 20 bit address
         space for the extended RAM, so I added a 1MiB extended RAM to the system.
         </li>
+      <li><b>ATA port</b> - The Odyssey was always going to need a way to manipulate data on
+        some kind of persistent storage device. I decided to implement an ATA port, as this
+        would allow attaching any IDE device to the Odyssey and storing data there. Combined
+        with CompactFlash-to-IDE and SD-to-IDE adapters, it even makes for something resembling
+        removable media, without the complexity of implementing a floppy controller.  The ATA
+        port and it supporting driver code was added in late 2024, and from there a complete
+        redesign of the OdysseyOS took place, leading up to VCF SoCal 2025, where I was able
+        to demonstrate the Odyssey booting from an SD card via an SD-to-IDE adapter.
+        </li>
     </ul>
-    And that brings us to January 2024. The Wire Wrap Odyssey computer is fully operational, but
-    still has lots of work to do. In particular, I still need to implement an ATA port, so I can
-    have some kind of file system and removable media to work with, to make it possible to author
-    programs and assemble them on my "real" computer, then just jam a disk or card into the Odyssey
-    and run them without having to reflash an EEPROM. There are also numerous gremlins still
-    lurking in the hardware and software that I still need to work out. For example, scrolling
-    the display too many times, quickly, will eventually cause the CPU to crash. And issuing
-    a cursor-up command will <i>sometimes</i> cause the CPU to crash.
+    And that brings us to February 2025. The Wire Wrap Odyssey computer is fully operational, but
+    still has lots of work to do. In particular, I need to add more programmable timer interrupts,
+    which are needed for writing games without having to painstakingly track clock cycles to
+    implement timing for screen refreshes and object movement on screen.  I also need to add some
+    sort of sound device (perhaps an OPL-3 like from the Sound Blaster 16).  Once those are added
+    I believe the hardware will be in a state where I can pivot more toward refining the software:
+    improving the operating system usability and performance, and writing some fun software for it,
+    such as games and maybe even a web browser (via a serial wifi adapter).
     </p>
     <p>
     The Wire Wrap Odyssey has been a labor of love for over a decade. And it has been a load of
