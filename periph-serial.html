@@ -81,7 +81,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     peripheral. Just read and write memory addresses that are mapped to the device.
     The 80C52 can be a bit finnicky though, and it took me quite some time to
     get all the sequencing right. So naturally I abstracted the functionality
-    into a <a href=https://github.com/skaven81/mycpu/blob/master/assembler/lib/uart.asm>library</a>.
+    into a <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/uart.asm>library</a>.
     The library contains some helpful functions to make interfacing with the
     UART easier:
     <ul>
@@ -103,7 +103,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     you are using (and the USB-to-serial adapter you are using) is following the strict RTS/CTS signaling
     protocol. I am able to get things working by using GTKTerm and configuring the serial device for
     the appropriate baud rate, word length, parity bits, and stop bits, and no flow control. To remind
-    myself of how to configure the remote terminal, <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/20-cmd_console.asm>
+    myself of how to configure the remote terminal, <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/console/20-cmd_console.asm>
     I put some notes at the top of the source code for the VT220 console program</a>.
     </div>
 

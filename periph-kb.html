@@ -120,10 +120,10 @@ vim: ts=2 sts=2 sw=2 expandtab
     <h3>Keyboard interrupt handler</h3>
     <p>
     When the OS wants the keyboard to become active, it can set the IRQ1 handler to
-    the <a href="https://github.com/skaven81/mycpu/blob/master/assembler/lib/keyboard.asm#L55" target=_blank>
+    the <a href="https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/keyboard.asm#L55" target=_blank>
     <tt>:kb_irq_buf</tt></a> function. This function takes each keystroke and appends
-    it to a buffer. Programs can use access functions (<a href="https://github.com/skaven81/mycpu/blob/master/assembler/lib/keyboard.asm#L81"><tt>:kb_bufsize</tt></a>
-    and <a href="https://github.com/skaven81/mycpu/blob/master/assembler/lib/keyboard.asm#L94"><tt>:kb_readbuf</tt></a>)
+    it to a buffer. Programs can use access functions (<a href="https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/keyboard.asm#L81"><tt>:kb_bufsize</tt></a>
+    and <a href="https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/keyboard.asm#L94"><tt>:kb_readbuf</tt></a>)
     to read from the buffer. This way keystrokes can be processed even if the CPU is busy doing
     other things, and extra keystrokes will be buffered until the program can read them.
     </p>
