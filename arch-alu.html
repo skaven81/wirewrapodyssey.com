@@ -141,12 +141,12 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li><tt>0x07</tt> - <tt>B minus A minus Cin_LSB</tt></li>
       <li><tt>0x08</tt> - <tt>A minus 1 minus Cin_LSB</tt></li>
       <li><tt>0x09</tt> - <tt>B minus 1 minus Cin_LSB</tt></li>
-      <li><tt>0x0a</tt> - set bit <tt>0x80</tt> in A to <tt>Cin_LSB</tt> (set/clear blink)</li>
-      <li><tt>0x0b</tt> - toggle bit <tt>0x80</tt> in A (toggle blink)</li>
-      <li><tt>0x0c</tt> - set bit <tt>0x40</tt> in A to <tt>Cin_LSB</tt> (set/clear cursor)</li>
-      <li><tt>0x0d</tt> - toggle bit <tt>0x40</tt> in A (toggle cursor)</li>
-      <li><tt>0x0e</tt> - set bits <tt>0xc0</tt> in A to <tt>Cin_LSB</tt> (set/clear blink+cursor)</li>
-      <li><tt>0x0f</tt> - toggle bits <tt>0xc0</tt> in A (toggle blink+cursor)</li>
+      <li><tt>0x0a</tt> - set bit <tt>0x80</tt> in A to <tt>Cin_LSB</tt> (set/clear MSB)</li>
+      <li><tt>0x0b</tt> - <tt>A plus B plus Cin_LSB</tt> (overflow set using signed semantics)</li>
+      <li><tt>0x0c</tt> - <tt>A minus B minus Cin_LSB</tt> (overflow set using signed semantics)</li>
+      <li><tt>0x0d</tt> - <tt>B minus A minus Cin_LSB</tt> (overflow set using signed semantics)</li>
+      <li><tt>0x0e</tt> - <tt>-A</tt> (2s complement inversion of A, overflow set if A is 0x80/-128, which cannot be inverted)</li>
+      <li><tt>0x0f</tt> - <tt>-B</tt> (2s complement inversion of B, overflow set if B is 0x80/-128, which cannot be inverted)</li>
       <li><tt>0x10</tt> - <tt>NOT A</tt></li>
       <li><tt>0x11</tt> - <tt>NOT B</tt></li>
       <li><tt>0x12</tt> - <tt>A AND B</tt></li>
@@ -154,15 +154,15 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li><tt>0x14</tt> - <tt>A XOR B</tt></li>
       <li><tt>0x15</tt> - <tt>A AND NOT B</tt></li>
       <li><tt>0x16</tt> - <tt>B AND NOT A</tt></li>
-      <li><tt>0x17</tt> - <tt>popcount(A)</tt> (but distributed across nybbles)</li>
-      <li><tt>0x18</tt> - <tt>popcount(B)</tt> (but distributed across nybbles)</li>
+      <li><tt>0x17</tt> - <tt>A AND 0x80</tt> (return MSB of A)</li>
+      <li><tt>0x18</tt> - <tt>B AND 0x80</tt> (return MSB of B)</li>
       <li><tt>0x19</tt> - <tt>A&lt;&lt;1</tt> (new LSB set by <tt>Cin_LSB</tt>)</li>
       <li><tt>0x1a</tt> - <tt>A&gt;&gt;1</tt> (new MSB set by <tt>Cin_MSB</tt>)</li>
       <li><tt>0x1b</tt> - <tt>B&lt;&lt;1</tt> (new LSB set by <tt>Cin_LSB</tt>)</li>
       <li><tt>0x1c</tt> - <tt>B&gt;&gt;1</tt> (new MSB set by <tt>Cin_MSB</tt>)</li>
-      <li><tt>0x1d</tt> - <tt>A&lt;&lt;1</tt> (arithmetic shift)</li>
-      <li><tt>0x1e</tt> - <tt>A&gt;&gt;1</tt> (arithmetic shift)</li>
-      <li><tt>0x1f</tt> - Reserved for future use (currently returns zero)</li>
+      <li><tt>0x1d</tt> - <tt>A&lt;&lt;1</tt> (arithmetic left shift, new LSB set by Cin_LSB)</li>
+      <li><tt>0x1e</tt> - <tt>A&gt;&gt;1</tt> (arithmetic right shift, extends sign from MSB)</li>
+      <li><tt>0x1f</tt> - <tt>Amsb XOR Bmsb</tt></li>
     </ul>
     </p>
 
@@ -171,7 +171,6 @@ vim: ts=2 sts=2 sw=2 expandtab
     You can read more about how the ALU is generated and tested with software, in the
     <a href='javascript:show_content("sw-alu");'>software</a> section.
     </p>
-
   </div>
 </body>
 </html>
