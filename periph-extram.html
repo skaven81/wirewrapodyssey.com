@@ -143,7 +143,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     accessible, and that I didn't have any glitches like a mis-wired address pin that
     would cause the wrong RAM chip to be written or read for a given address. To that
     end, I did some research on how RAM testers do this, and wrote a
-    <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/memtest/20-cmd_memtest.asm>
+    <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/memtest/20-cmd_memtest.asm>
     shell command</a> that runs a comprehensive memory test. It uses the tried-and-true method
     of reading and writing <tt>0x55</tt> and <tt>0xaa</tt> values to each address, to check
     for any stuck bits or mis-wired data lines. It then runs a check of the window logic,
@@ -153,7 +153,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     Fortunately, the memory tests all seem to come back fine. I added a faster version
-    of the test to the <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/00-main.asm#L61>
+    of the test to the <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/00-main.asm#L61>
     boot sequence</a>, which helps to ensure all the interconnect cables are firmly seated
     when booting the system. It's also fun to watch 1024KiB of RAM get checked during boot,
     it's reminisicent of my old 8088, 386, and 486 PCs booting up.

@@ -59,7 +59,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     This is already covered in depth in the <a href='javascript:show_content("periph-ata");'>Peripherals - ATA</a>
     section. So I won't repeat that content here. What I will add for reference, however,
-    is a link to the <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/ata.asm>driver code for the ATA port</a>.
+    is a link to the <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/ata.asm>driver code for the ATA port</a>.
     I also want to link to this excellent guide on interfacing an ATA port with an 8-bit
     computer: <a href=https://blog.retroleum.co.uk/electronics-articles/an-8-bit-ide-interface/>
     An 8-bit IDE interface @ Retroleum</a>. Also helpful was the offical ATA spec:
@@ -147,7 +147,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     To interface with FAT16, I had to write a ton of code:
     <ul>
-      <li>Mounting a FAT16 filesystem: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_mount.asm>fat16_mount.asm</a></li>
+      <li>Mounting a FAT16 filesystem: <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/fat16_mount.asm>fat16_mount.asm</a></li>
       <ul>
         <li><tt>:fat16_mount</tt> - given the LBA (usually zero) of a FAT16 filesystem, will
           read the boot sector, extract all the pertinent structural data, then
@@ -157,20 +157,20 @@ vim: ts=2 sts=2 sw=2 expandtab
         <li><tt>:fat16_print</tt> - given the address of a filesystem handle, will print
           out all the extracted data about the filesystem.</li>
       </ul>
-      <li>Calculating FAT16 things: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_calc.asm>fat16_calc.asm</a></li>
+      <li>Calculating FAT16 things: <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/fat16_calc.asm>fat16_calc.asm</a></li>
       <ul>
         <li><tt>:fat16_cluster_to_lba</tt> - given a 16-bit cluster number and a filesystem handle address, returns the LBA of the cluster on disk</li>
         <li><tt>:fat16_lba_to_cluster</tt> - same as above, but in reverse</li>
         <li><tt>:fat16_next_cluster</tt> - given a 16-bit cluster number and a filesystem handle address, returns the next cluster of the file</li>
       </ul>
-      <li>FAT16 directory parsing: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_dirent.asm>fat16_dirent.asm</a></li>
+      <li>FAT16 directory parsing: <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/fat16_dirent.asm>fat16_dirent.asm</a></li>
       <ul>
         <li><tt>:fat16_dirent_filename</tt> - given the address of a 32-bit directory entry, returns the filename as a string</li>
         <li><tt>:fat16_dirent_attribute</tt> - same, but returns the attribute byte</li>
         <li><tt>:fat16_dirent_cluster</tt> - same, but returns the 16-bit starting cluster</li>
         <li>...plus some additional utility functions for returning a string representing a directory entry, for implementing a <tt>dir</tt> command</li>
       </ul>
-      <li>FAT16 directory walking: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_dir.asm>fat16_dir.asm</a></li>
+      <li>FAT16 directory walking: <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/fat16_dir.asm>fat16_dir.asm</a></li>
       <ul>
         <li><tt>:fat16_dirwalk_start</tt> and <tt>:fat16_dirwalk_next</tt> and <tt>:fat16_dirwalk_end</tt> -
           given a starting cluster number of the directory, allows iteratively walking through
@@ -181,7 +181,7 @@ vim: ts=2 sts=2 sw=2 expandtab
           a specific file or directory in a directory, and returns its 32-byte directory entry if
           found.</li>
       </ul>
-      <li>FAT16 file reading: <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_readfile.asm>fat16_readfile.asm</a></li>
+      <li>FAT16 file reading: <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/fat16_readfile.asm>fat16_readfile.asm</a></li>
       <ul>
         <li><tt>:fat16_readfile</tt> - given the address of a filesystem handle and the address
           of a directory entry, reads the file referenced by the directory entry into memory,
@@ -252,7 +252,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     With the assembler able to write <tt>ODY</tt> files, a corresponding set of library
-    functions were written into the operating system code in <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/fat16_odyexe.asm>
+    functions were written into the operating system code in <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/fat16_odyexe.asm>
     fat16_odyexe.asm</a>.
     <ul>
       <li><tt>:fat16_inspect_ody</tt> - reads the first 6 bytes of a file and makes sure that
@@ -271,7 +271,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     With all the above tooling in place, the operating system could be rewritten to behave
     more like a typical computer, where it boots initially from ROM, then transfers control
     of the system to an operating system which resides on disk. The boot sequence, which is
-    in <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/00-main.asm>00-main.asm</a>,
+    in <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/00-main.asm>00-main.asm</a>,
     performs the following steps:
     <ol>
       <li>Initialize core system functions, such as initializing the memory allocator, the
@@ -286,11 +286,11 @@ vim: ts=2 sts=2 sw=2 expandtab
     This sequence means that the BIOS/ROM no longer needs code in it for any commands, a shell,
     or anything other than the static sequence of "booting" the machine. Everything else can
     be in <tt>SYSTEM.ODY</tt>. However, since RAM is scarce and ROM is already there, the ROM
-    still contains all of the <a href=https://github.com/skaven81/mycpu/tree/master/assembler/os_shell/lib>
+    still contains all of the <a href=https://github.com/skaven81/mycpu/tree/master/os_shell/lib>
     library code</a> so that ODY executables don't have to include it themselves.
     </p>
     <p>
-    The <a href=https://github.com/skaven81/mycpu/tree/master/assembler/os_shell/system><tt>SYSTEM.ODY</tt></a>
+    The <a href=https://github.com/skaven81/mycpu/tree/master/os_shell/system><tt>SYSTEM.ODY</tt></a>
     executable is really just a slight rework of the same shell code I was using before in the
     early ROM-only versions of the OdysseyOS. It will get improvements over time, but the
     important thing is that instead of all the commands it can execute being compiled into one giant

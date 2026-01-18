@@ -76,7 +76,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     which is called the "heap". Advanced functions that require a long or variable length
     argument list can be coded to expect their arguments to be present on the heap, rather
     than the stack. The caller uses functions from
-    <a href=https://github.com/skaven81/mycpu/blob/master/assembler/os_shell/lib/heap.asm>heap.asm</a>
+    <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/heap.asm>heap.asm</a>
     to push arguments onto the heap, then issues a <tt>CALL</tt> to jump into the subroutine.
     The subroutine uses heap functions to pop the arguments from the heap. Heap operations
     do not impact the stack, and the FIFO nature of the heap also preserves the call stack
