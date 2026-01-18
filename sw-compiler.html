@@ -1,0 +1,58 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Software: C Compiler
+  </div>
+  <div class='section-body'>
+    <h2>Software: C Compiler</h2>
+    <p>
+    Writing software for the Odyssey in assembly language is time consuming and
+    error-prone (as it is for any assembly programming). As the sophistication of
+    the software in the Odyssey OS increased (notably as FAT16 support was added),
+    it was no longer practical to write all the software by hand in assembly.  So
+    I set about to write a C compiler.
+    </p>
+
+    <h2>Compiler Architecture</h2>
+    <p>
+    I did not take "compiler design" in college (though it was an offered course).
+    So I was coming at the whole "write a compiler" problem with a pretty severe
+    deficit.  But I was fortunte to stuble upon the
+    <a href=https://github.com/eliben/pycparser>pycparser</a> project, which handily
+    solved the most challenging problem of even getting started: how to parse C
+    code.  Pycparser's only purpose is to take C code as input, and generates an
+    abstract syntax tree (AST) as output.  With an AST, it is then possible to
+    generate assembly code while recursively traversing the tree.
+    </p>
+
+    <p>
+    The call structure implemented in the compiler mimics how I call functions when
+    writing direct assembly: the "heap" functions (software stack) are used to
+    push parameters onto the "heap" (software stack), then the function is called.
+    But the called functions, instead of popping the values off the heap, leaves
+    them there and sets the <tt>D</tt> register to the <tt>$heap_ptr</tt> which
+    then acts as a <i>frame pointer</i>.  This allows each function to allocate
+    its own local variables that are reentrant-safe, since they are located on
+    a stack.
+    </p>
+
+    <p>
+    Code for the compiler can be found in the git repository under (unsurprisingly)
+    <a href=https://github.com/skaven81/mycpu/tree/master/c_compiler>c_compiler</a>.
+    </p>
+
+    <h2>Limitations</h2>
+    <p>
+    My compiler is nowhere near as optimized as something fancy like <tt>gcc</tt>
+    which has decades of design work that goes into it.  The assembly code it
+    generates is rather defensive. There are often useless "throwaway" operations
+    included just because they happen to be part of the AST. But even a cursory
+    glance at the generated code shows that the operations are unnecessary. But
+    coding in that level of sophistication into the compiler is REALLY hard.
+    </p>
+  </div>
+</body>
+</html>

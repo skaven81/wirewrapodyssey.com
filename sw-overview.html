@@ -28,6 +28,10 @@ vim: ts=2 sts=2 sw=2 expandtab
         microcode syntax, which in turn is used to define the CPU's opcode behavior.
         The assembler then reads the opcode specification to generate a parser for assembly
         files, which are processed into machine code that is written to the CPU's program ROM.</li>
+      <li><a href="javascript:show_content('sw-compiler')">C Compiler</a> - As the sophistication
+        of programs written for the Odyssey increased, it became clear that programming only
+        in assembly was going to be a limitation. So I buckled down and wrote a C compiler
+        that is able to generate Odyssey assembly code as output.</li>
       <li><a href="javascript:show_content('sw-library')">OS Library</a> - With a functional
         assembler, the abstraction moves up another layer by implementing Odyssey assembly
         library functions to perform basic tasks like clearing the screen, implementing
