@@ -31,7 +31,9 @@ vim: ts=2 sts=2 sw=2 expandtab
 
     <figure class='figure-container'>
       <a href="img/CPU Block Diagram.drawio.svg" target=_blank><img src="img/CPU Block Diagram.drawio.svg"></a>
-      <figcaption class='figure-caption'>Block diagram of the Wire Wrap Odyssey CPU and peripherals. Click to open fullsize in a new tab.</figcaption>
+      <figcaption class='figure-caption'>Block diagram of the Wire Wrap Odyssey CPU and peripherals. Click to open fullsize in a new tab.
+      <b>Note:</b> this diagram is out of date and does not yet include the
+      <a href="javascript:show_content('periph-expandram')">expanded memory</a>.</figcaption>
     </figure>
 
     <h3>Address and Data Bus</h3>
@@ -66,6 +68,13 @@ vim: ts=2 sts=2 sw=2 expandtab
     that allows for RAM to be allocated dynamically from this 20KiB range.  Larger
     data sets can be manipulated using the 1MiB extended RAM peripheral, which is
     visible through a pair of configurable 4KiB windows.
+    </p>
+    <p>
+    An additional <tt>AS7C164A</tt> 8Kx8 static RAM is mounted on the same board and
+    provides a small block of directly-accessible <a href="javascript:show_content('periph-expandram')">expanded memory</a>,
+    mapped at <tt>0xc800-0xcfff</tt> (2KiB) and <tt>0xf000-0xffef</tt> (~4KiB).  Unlike the
+    extended RAM, no window registers are involved; these addresses are always present
+    and accessible like any other location in the address space.
     </p>
 
     <h3>Program Counter</h3>
@@ -216,8 +225,8 @@ vim: ts=2 sts=2 sw=2 expandtab
     Currently the Odyssey has five peripherals:
     <ul>
     <li>PS/2 Keyboard controller</li>
-    <li><tt>DS1511Y+</tt> Real Time Clock and timer (also contains a 256 byte battery-backed static RAM)
-    <li><tt>82C52</tt> UART
+    <li><tt>DS1511Y+</tt> Real Time Clock and timer (also contains a 256 byte battery-backed static RAM)</li>
+    <li><tt>82C52</tt> UART</li>
     <li>1MB extended RAM</li>
     <li>ATA port</li>
     </ul>

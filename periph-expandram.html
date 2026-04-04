@@ -1,0 +1,140 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Peripherals: Expanded Memory
+  </div>
+  <div class='section-body'>
+    <h2>Peripherals: Expanded Memory</h2>
+
+    <h3>Overview</h3>
+    <p>
+    The <a href="javascript:show_content('periph-extram')">1MB extended RAM</a> provides
+    a large pool of storage for programs that need more space than the 20KiB of main RAM
+    can offer.  But using it requires discipline: before accessing an extended RAM address,
+    you have to set the window register to point at the right page, do the work, and then
+    restore the window register if other code might be relying on it.  That overhead is
+    perfectly acceptable when operating on large data sets, but it is awkward when all you
+    need is a few hundred bytes of scratch space at a predictable, fixed address.
+    </p>
+    <p>
+    The expanded memory addresses this gap.  It is a modest block of directly-accessible
+    static RAM mapped into two otherwise unused regions of the address space, with no
+    window registers, no page management, and no shared state to coordinate.  It is always
+    there, at the same addresses, and reading or writing it is no different from reading or
+    writing main RAM.
+    </p>
+
+    <h3>Implementation</h3>
+    <p>
+    The expanded memory is implemented as an <tt>AS7C164A</tt> 8Kx8 static RAM, mounted
+    on the video card and main memory board alongside the dual-port RAM that provides the
+    main memory and video framebuffer.  Unlike the extended RAM, which routes accesses
+    through a windowing scheme backed by a pair of 512KiB chips, the <tt>AS7C164A</tt>
+    is wired directly to the address and data buses.  When the address falls within one
+    of the two expanded memory regions and the chip's <tt>/CE</tt> is asserted, it
+    responds on the data bus just like any other memory on the system.
+    </p>
+
+    <h3>Address Map</h3>
+    <p>
+    The expanded memory occupies two regions of the address space that were previously
+    unused:
+    <ul>
+      <li><tt>0xc800-0xcfff</tt> &mdash; 2KiB, in the peripheral decode space just above
+        the <tt>0xc300-0xc3ff</tt> range used by the
+        <a href="javascript:show_content('periph-ata')">ATA port</a></li>
+      <li><tt>0xf000-0xffef</tt> &mdash; approximately 4KiB, above the
+        <a href="javascript:show_content('periph-extram')">extended RAM</a> windows at
+        <tt>0xd000-0xdfff</tt> and <tt>0xe000-0xefff</tt></li>
+    </ul>
+    The upper limit of the second region is <tt>0xffef</tt> rather than <tt>0xffff</tt>
+    because <tt>0xffff</tt> is the "bus idle" address.  When no unit is actively driving
+    the address bus, all sixteen address lines are pulled high by the 330 ohm pullup
+    resistors, placing <tt>0xffff</tt> on the bus.  Having the expanded memory assert
+    <tt>/CE</tt> in response to that address could cause spurious reads or bus contention
+    during the transitions between microcode steps, so the last sixteen bytes of the
+    <tt>0xff</tt> page (<tt>0xfff0-0xffff</tt>) are excluded.
+    </p>
+    <p>
+    The <tt>AS7C164A</tt> has 13 address pins (<tt>A0-A12</tt>), giving it an 8KiB
+    address space.  The two CPU address regions map into this space as follows:
+    <ul>
+      <li>CPU <tt>0xc800-0xcfff</tt> &rarr; chip <tt>0x0800-0x0fff</tt> (2KiB, lower bank)</li>
+      <li>CPU <tt>0xf000-0xffef</tt> &rarr; chip <tt>0x1000-0x1fef</tt> (~4KiB, upper bank)</li>
+    </ul>
+    Chip addresses <tt>0x0000-0x07ff</tt> are not mapped to anything and go unused.
+    </p>
+
+    <h3>Address Decode</h3>
+    <p>
+    The full address decode logic is shown in the diagram below.
+    </p>
+
+    <figure class='figure-container'>
+      <a href="img/expanded_memory_decode.png" target=_blank><img src="img/expanded_memory_decode.png"></a>
+      <figcaption class='figure-caption'>
+        Logic diagram for the expanded memory address decode.  Click to open fullsize in a new tab.
+      </figcaption>
+    </figure>
+
+    <p>
+    The decode logic generates two key signals: <tt>/C_RANGE</tt>, which is asserted
+    (low) when the CPU address is in <tt>0xc800-0xcfff</tt>, and a composite <tt>/CE</tt>
+    that is asserted when the address is in either expanded memory region.  These signals,
+    along with <tt>/WRAM</tt> and the clock, feed the remaining control pins of the RAM.
+    </p>
+
+    <h3>Bank Selection</h3>
+    <p>
+    Mapping two disjoint CPU address ranges into a single contiguous RAM chip requires
+    some way of telling the chip which "half" of its address space is being accessed.
+    Rather than connect CPU <tt>A12</tt> directly to the chip's <tt>A12</tt> pin, the
+    decode logic drives <tt>A12</tt> on the RAM with the <tt>/C_RANGE</tt> signal.
+    </p>
+    <p>
+    When the CPU is accessing <tt>0xc800-0xcfff</tt>, <tt>/C_RANGE</tt> is low, so the
+    chip sees <tt>A12=0</tt>.  Combined with CPU <tt>A11-A0</tt> wired directly to chip
+    <tt>A11-A0</tt>, accesses in this range land in chip addresses <tt>0x0800-0x0fff</tt>
+    (since CPU <tt>A11</tt> is always 1 throughout the <tt>0xc800-0xcfff</tt> range).
+    When the CPU is accessing <tt>0xf000-0xffef</tt>, <tt>/C_RANGE</tt> is high, so
+    the chip sees <tt>A12=1</tt>, and accesses land in chip addresses
+    <tt>0x1000-0x1fef</tt>.  The chip's lower 2KiB (<tt>0x0000-0x07ff</tt>, where
+    <tt>A12=0</tt> and <tt>A11=0</tt>) is never selected by either address range and
+    goes unused.
+    </p>
+    <p>
+    This approach means the bank selection happens entirely in the decode logic, without
+    consuming an extra CPU address bit or requiring any software-visible configuration.
+    From the software's perspective, <tt>0xc800</tt> and <tt>0xf000</tt> are simply two
+    separate blocks of flat, directly-addressable RAM.
+    </p>
+
+    <h3>/OE and /WE Generation</h3>
+    <p>
+    The <tt>AS7C164A</tt> uses separate <tt>/OE</tt> (output enable) and <tt>/WE</tt>
+    (write enable) pins to distinguish read and write cycles, just like the extended RAM
+    chips.  Both signals are derived from the composite <tt>/CE</tt> and the CPU's
+    <tt>/WRAM</tt> signal:
+    <ul>
+      <li><tt>/OE</tt> is asserted during read cycles &mdash; when <tt>/CE</tt> is low
+        and <tt>/WRAM</tt> is high.</li>
+      <li><tt>/WE</tt> is asserted during write cycles &mdash; when <tt>/CE</tt> is low
+        and <tt>/WRAM</tt> is low.</li>
+    </ul>
+    <tt>/OE</tt> is combinatorial: it follows directly from the address decode and
+    <tt>/WRAM</tt> with no clock gating.  As soon as <tt>/CE</tt> is asserted and
+    <tt>/WRAM</tt> is high, the chip drives the data bus.  <tt>/WE</tt>, on the other
+    hand, is gated by the clock.  A new microcode step begins on the rising clock edge,
+    and at that moment the address and data buses may still be settling as control signals
+    propagate through the logic.  By requiring the clock to be low before <tt>/WE</tt>
+    can be asserted, writes are held off until the falling clock edge, which marks the
+    end of the instruction cycle and the point at which both buses are guaranteed to be
+    stable.  The exact gating is shown in the decode diagram above.
+    </p>
+
+  </div>
+</body>
+</html>
