@@ -366,8 +366,21 @@ vim: ts=2 sts=2 sw=2 expandtab
         redesign of the OdysseyOS took place, leading up to VCF SoCal 2025, where I was able
         to demonstrate the Odyssey booting from an SD card via an SD-to-IDE adapter.
         </li>
+      <li><b>Expanded Memory</b> - After the ATA port and OS redesign, I turned my attention
+        back to memory.  The software heap, UART and keyboard buffers, and assembler static
+        arrays were all packed into the <tt>0xb000-0xbeff</tt> range of main RAM, leaving
+        only 20KiB of contiguous space available for programs.  The solution was to add a
+        small <tt>AS7C164A</tt> 8KiB static RAM to the video card board, wired directly to
+        the address and data buses with no window registers or paging logic.  It occupies two
+        otherwise unused regions of the address space: <tt>0xc800-0xcfff</tt> and
+        <tt>0xf000-0xffef</tt>.  Relocating those fixed system regions into expanded memory
+        freed the <tt>0x6000-0xbeff</tt> range of main RAM for program use, nearly 24KiB in
+        total.  The software heap also grew from 768 bytes to almost 4KiB in the process,
+        which is a meaningful improvement for C-compiled code with non-trivial local variables.
+        This was completed in early April 2026.
+        </li>
     </ul>
-    And that brings us to February 2025. The Wire Wrap Odyssey computer is fully operational, but
+    And that brings us to spring 2026. The Wire Wrap Odyssey computer is fully operational, but
     still has lots of work to do. In particular, I need to add more programmable timer interrupts,
     which are needed for writing games without having to painstakingly track clock cycles to
     implement timing for screen refreshes and object movement on screen.  I also need to add some

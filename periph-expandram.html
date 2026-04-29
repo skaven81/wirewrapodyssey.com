@@ -135,6 +135,32 @@ vim: ts=2 sts=2 sw=2 expandtab
     stable.  The exact gating is shown in the decode diagram above.
     </p>
 
+    <h3>Software</h3>
+    <p>
+    Before the expanded memory existed, the <tt>0xb000-0xbeff</tt> range of main RAM
+    was consumed by fixed system allocations: the software heap used for C function
+    parameters and local variables, the UART and keyboard receive buffers, and the
+    global array storage used by the assembler.  That left only the <tt>0x6000-0xafff</tt>
+    region &mdash; about 20KiB &mdash; for <tt>malloc</tt> and program use.
+    </p>
+    <p>
+    Relocating those regions into expanded memory changes the picture considerably.
+    The current allocations are:
+    <ul>
+      <li><tt>0xc800-0xcaff</tt> -- 768 bytes for the assembler's statically-allocated
+        global arrays</li>
+      <li><tt>0xcb00-0xcbff</tt> -- 256-byte UART receive buffer</li>
+      <li><tt>0xcc00-0xccff</tt> -- 256-byte keyboard receive buffer</li>
+      <li><tt>0xcd00-0xcfff</tt> -- 768 bytes currently unallocated</li>
+      <li><tt>0xf000-0xffef</tt> -- nearly 4KiB software heap, used for C function
+        parameters and local variables</li>
+    </ul>
+    With those regions out of main RAM, the contiguous <tt>malloc</tt>-able region now
+    runs from <tt>0x6000</tt> all the way to <tt>0xbeff</tt>, a total of nearly 24KiB.
+    The software heap itself grew from 768 bytes to almost 4KiB, which makes a meaningful
+    difference when writing C code with non-trivial local variable usage.
+    </p>
+
   </div>
 </body>
 </html>

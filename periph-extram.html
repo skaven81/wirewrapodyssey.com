@@ -12,13 +12,16 @@ vim: ts=2 sts=2 sw=2 expandtab
     <h3>Overview</h3>
     <p>
     The primary RAM for the Odyssey computer is a Renesas 7007 32KiB dual-port static RAM.
-    8KiB of that address space is dedicated to the video card framebuffer, and 4KiB is tied
-    up in various hard-coded memory regions such as the stack, heap, and keyboard and UART
-    buffers. That only leaves 20KiB for programs to use. Once loading programs from removable
-    media (or over serial) is implemented, that 20KiB also has to store the program being
-    executed as well as the RAM that it needs to run. Obviously it's possible to do amazing
-    things with less -- the Atari 2600 only had 128 bytes of RAM and 4KiB of ROM on the
-    cartridge. The first TRS-80 had just 4KiB of RAM.
+    8KiB of that address space is dedicated to the video card framebuffer, and at the time
+    the extended RAM was designed, another 4KiB was tied up in fixed system regions: the
+    software heap, keyboard and UART buffers, and assembler static arrays.  That left only
+    20KiB for programs to use (the later addition of the
+    <a href="javascript:show_content('periph-expandram')">expanded memory</a> relocated
+    those fixed regions and recovered most of that space, but that came later).  Once
+    loading programs from removable media (or over serial) is implemented, the available
+    RAM also has to store the program being executed as well as the RAM that it needs to
+    run. Obviously it's possible to do amazing things with less -- the Atari 2600 only had
+    128 bytes of RAM and 4KiB of ROM on the cartridge. The first TRS-80 had just 4KiB of RAM.
     </p>
     <p>
     But I'm not in the business of...well...business. I am not trying to keep BoM costs down

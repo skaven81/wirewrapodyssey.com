@@ -49,6 +49,14 @@ vim: ts=2 sts=2 sw=2 expandtab
         and write from essentially any ATA-compliant device, such as compact flash cards
         and even old hard drives. It has also allowed the OdysseyOS to be redesigned so that
         it boots into a disk-based OS like a "normal" computer.</li>
+      <li><a href="javascript:show_content('periph-expandram')">Expanded Memory</a> - An
+        <tt>AS7C164A</tt> 8KiB static RAM mounted on the video card board, mapped into two
+        otherwise unused regions of the address space: <tt>0xc800-0xcfff</tt> and
+        <tt>0xf000-0xffef</tt>.  Unlike the extended RAM, there are no window registers
+        involved -- these addresses are always present and accessible like any other
+        location in the address space.  The software heap, UART and keyboard buffers, and
+        assembler static arrays all live here, which freed up nearly 24KiB of contiguous
+        main RAM for program use.</li>
     </ul>
     </p>
   </div>

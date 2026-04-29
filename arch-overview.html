@@ -62,11 +62,14 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     The first 8KiB of the RAM's address space is reserved for the video card, and
-    the last 4KiB is reserved for system functions like the stack, heap, and buffers
-    for the UART and keyboard.  The remaining 20KiB is available for application
-    use. The Odyssey OS includes a primitive but functional <tt>malloc</tt> implementation
-    that allows for RAM to be allocated dynamically from this 20KiB range.  Larger
-    data sets can be manipulated using the 1MiB extended RAM peripheral, which is
+    256 bytes at the top (<tt>0xbf00-0xbfff</tt>) are used for the CPU hardware stack.
+    The remaining ~24KiB, from <tt>0x6000</tt> to <tt>0xbeff</tt>, is available for
+    application use via the Odyssey OS's <tt>malloc</tt> implementation.  This wasn't
+    always the case -- the software heap, UART and keyboard buffers, and assembler
+    static arrays used to consume about 4KiB of this range, leaving only 20KiB for
+    programs.  Adding the <a href="javascript:show_content('periph-expandram')">expanded
+    memory</a> freed all of that up by giving those allocations their own address space.
+    Larger data sets can be manipulated using the 1MiB extended RAM peripheral, which is
     visible through a pair of configurable 4KiB windows.
     </p>
     <p>
