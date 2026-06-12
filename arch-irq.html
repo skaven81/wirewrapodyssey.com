@@ -129,9 +129,10 @@ vim: ts=2 sts=2 sw=2 expandtab
 
     <code><pre>
     [0x03] RETI
-    x 0 AddrBusSP WritePCH DecrementSP UnmaskInterrupts
+    x 0 AddrBusSP WritePCH DecrementSP
     x 1 AddrBusSP WritePCL DecrementSP RestoreStatusFlags WriteStatus
-    x 2 NextInstruction
+    x 2 UnmaskInterrupts
+    x 3 NextInstruction
     </pre></code>
 
     <h3>Interrupt vectors</h3>
@@ -200,32 +201,46 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     My solution to this was a bit of a hack, but it works. In the notes above, notice the hand-drawn
     logic in the lower-right. This is the status flag preservation system.
+    </p>
+    <p>
+    The hardware implementation uses two 74x257 4-input mux chips. One mux selects what is
+    written to the <b>backup bits [7:5]</b> -- its select input is <tt>IRQMASK</tt>:
+    <tt>IRQMASK=0</tt> routes the current ALU flags to the backup D inputs;
+    <tt>IRQMASK=1</tt> loops the backup Q outputs back to the backup D inputs (freeze/hold).
+    The other mux selects what is written to the <b>primary bits [2:0]</b> -- its select input
+    is <tt>STRES</tt>: <tt>STRES=0</tt> routes the current ALU flags to the primary D inputs;
+    <tt>STRES=1</tt> routes the backup Q outputs to the primary D inputs (restore).
+    Both mux outputs are only clocked into the status register flip-flops when the
+    <tt>/WSTAT</tt> (WriteStatus) microcode control signal asserts.
+    </p>
+    <p>
+    This gives four states based on the two control signals:
     <ul>
-      <li><b>Normal operation</b> - <tt>IRQMASK=0</tt> (interrupts are enabled) and <tt>STRES=0</tt>
-        (not in <tt>RETI</tt> instruction): When ALU operations write the status register, the flags
-        are written to both sides of the status register (bits 7, 6, and 5 are the "backup" status bits).
+      <li><b>Normal operation</b> - <tt>IRQMASK=0</tt> and <tt>STRES=0</tt>: <tt>/WSTAT</tt>
+        writes the current ALU flags to <b>both</b> the primary bits [2:0] and the backup bits
+        [7:5]. Backup mirrors primary after every ALU operation.
         </li>
-      <li><b>IRQ handling</b> - <tt>IRQMASK=1</tt> (interrupts are disabled) and <tt>STRES=0</tt>
-        (not in <tt>RETI</tt> instruction): When interrupts are disabled (which is typically when
-        inside an interrupt handler, but it's OK when it happens during normal code where <tt>MASKINT</tt>
-        instruction is executed): When ALU operations write the status register, the flags are only
-        written to the primary/low side (bits 2, 1, 0). The backup/high side (bits 7, 6, 5) are
-        left alone. This has the effect of preserving the status bits upon entering the <tt>IRQ</tt>
-        instruction, because any ALU operation when in this state only affects the primary/low
-        set of flags.
+      <li><b>IRQ handling</b> - <tt>IRQMASK=1</tt> and <tt>STRES=0</tt>: <tt>/WSTAT</tt>
+        writes the current ALU flags to the primary bits [2:0] only. The backup mux loops
+        backup Q back to backup D, so backup [7:5] holds its value (frozen). This preserves
+        the pre-interrupt status flags in the backup bits across the entire ISR.
         </li>
-      <li><b>IRQ return</b> - <tt>IRQMASK=1</tt> (interrupts are disabled) and <tt>STRES=1</tt>
-        (the <tt>RETI</tt> instruction is the only one that sets this control signal): When returning
-        from an interrupt handler, <tt>RETI</tt> marks the end of the handler. If <tt>IRQMASK=0</tt>
-        and <tt>STRES=1</tt>, the status flags in bits 7, 6, 5 are copied to bits 2, 1, 0 in the
-        status register, thus restoring the status flags from before the interrupt handler executed.
+      <li><b>IRQ return</b> - <tt>IRQMASK=1</tt> and <tt>STRES=1</tt> (only <tt>RETI</tt>
+        asserts <tt>STRES</tt>): <tt>/WSTAT</tt> writes the backup bits [7:5] to the primary
+        bits [2:0] (restore). The backup mux again loops backup to itself, so the backup
+        bits are also retained unchanged. This is the intended restore state.
         </li>
     </ul>
-    The fourth state, <tt>IRQMASK=0 + STRES=1</tt> should never happen, as the <tt>STRES</tt> control
-    signal is only asserted in the <tt>RETI</tt> opcode, which should only ever be executed as part
-    of an interrupt vector (which would have been started by the <tt>IRQ</tt> opcode, which sets
-    <tt>IRQMASK=1</tt>). If somehow this state is achieved, ALU operations write their status flags
-    to the backup/high side of the status register, not the primary/low side.
+    The fourth state, <tt>IRQMASK=0 + STRES=1</tt>, is not a useful state. When it occurs,
+    <tt>/WSTAT</tt> writes the backup Q value to primary [2:0] (the STRES=1 path -- a correct
+    restore), but simultaneously writes the <b>current ALU flag output</b> to backup [7:5]
+    (the IRQMASK=0 path). Because no ALU operation is active during <tt>RETI</tt>'s
+    <tt>WriteStatus</tt> step, the ALU output is whatever the last-used ALU operation
+    register happens to compute from the current register values -- effectively garbage that
+    silently overwrites the saved backup. The <tt>RETI</tt> microcode was originally written
+    with <tt>UnmaskInterrupts</tt> at step 0 (before <tt>WriteStatus</tt> at step 1), which
+    put the hardware into the fourth state on every interrupt return. This was fixed in
+    June 2026 and now back-to-back IRQs work correctly.
     </p>
 
     <h3>Safely entering the interrupt handler</h3>
