@@ -42,6 +42,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     The expanded memory occupies two regions of the address space that were previously
     unused:
+    </p>
     <ul>
       <li><tt>0xc800-0xcfff</tt> &mdash; 2KiB, in the peripheral decode space just above
         the <tt>0xc300-0xc3ff</tt> range used by the
@@ -50,6 +51,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         <a href="javascript:show_content('periph-extram')">extended RAM</a> windows at
         <tt>0xd000-0xdfff</tt> and <tt>0xe000-0xefff</tt></li>
     </ul>
+    <p>
     The upper limit of the second region is <tt>0xffef</tt> rather than <tt>0xffff</tt>
     because <tt>0xffff</tt> is the "bus idle" address.  When no unit is actively driving
     the address bus, all sixteen address lines are pulled high by the 330 ohm pullup
@@ -61,10 +63,12 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     The <tt>AS7C164A</tt> has 13 address pins (<tt>A0-A12</tt>), giving it an 8KiB
     address space.  The two CPU address regions map into this space as follows:
+    </p>
     <ul>
       <li>CPU <tt>0xc800-0xcfff</tt> &rarr; chip <tt>0x0800-0x0fff</tt> (2KiB, lower bank)</li>
       <li>CPU <tt>0xf000-0xffef</tt> &rarr; chip <tt>0x1000-0x1fef</tt> (~4KiB, upper bank)</li>
     </ul>
+    <p>
     Chip addresses <tt>0x0000-0x07ff</tt> are not mapped to anything and go unused.
     </p>
 
@@ -118,13 +122,14 @@ vim: ts=2 sts=2 sw=2 expandtab
     (write enable) pins to distinguish read and write cycles, just like the extended RAM
     chips.  Both signals are derived from the composite <tt>/CE</tt> and the CPU's
     <tt>/WRAM</tt> signal:
+    </p>
     <ul>
       <li><tt>/OE</tt> is asserted during read cycles &mdash; when <tt>/CE</tt> is low
         and <tt>/WRAM</tt> is high.</li>
       <li><tt>/WE</tt> is asserted during write cycles &mdash; when <tt>/CE</tt> is low
         and <tt>/WRAM</tt> is low.</li>
     </ul>
-    <tt>/OE</tt> is combinatorial: it follows directly from the address decode and
+    <p><tt>/OE</tt> is combinatorial: it follows directly from the address decode and
     <tt>/WRAM</tt> with no clock gating.  As soon as <tt>/CE</tt> is asserted and
     <tt>/WRAM</tt> is high, the chip drives the data bus.  <tt>/WE</tt>, on the other
     hand, is gated by the clock.  A new microcode step begins on the rising clock edge,
@@ -146,6 +151,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     Relocating those regions into expanded memory changes the picture considerably.
     The current allocations are:
+    </p>
     <ul>
       <li><tt>0xc800-0xcaff</tt> -- 768 bytes for the assembler's statically-allocated
         global arrays</li>
@@ -155,6 +161,7 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li><tt>0xf000-0xffef</tt> -- nearly 4KiB software heap, used for C function
         parameters and local variables</li>
     </ul>
+    <p>
     With those regions out of main RAM, the contiguous <tt>malloc</tt>-able region now
     runs from <tt>0x6000</tt> all the way to <tt>0xbeff</tt>, a total of nearly 24KiB.
     The software heap itself grew from 768 bytes to almost 4KiB, which makes a meaningful

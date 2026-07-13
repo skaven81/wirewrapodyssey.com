@@ -71,6 +71,7 @@ vim: ts=2 sts=2 sw=2 expandtab
       <div style='overflow:auto'>
         <a href="photo/new_reset_clock_schem.jpg" target=_blank><img src="photo/new_reset_clock_schem_web.jpg" style='display:inline-block; margin-right:10px; max-width:49%'></a>
         <a href="photo/clock_624_chart.jpg" target=_blank><img src="photo/clock_624_chart_web.jpg" style='display:inline-block; max-width:49%'></a>
+      </div>
       <figcaption class='figure-caption'>
         Left, schematic and netlist for the Odyssey clock and reset signal generation circuitry.
         Right, VCO frequency chart from the '624 datasheet.
@@ -138,6 +139,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <h3>Reset Signal</h3>
     <p>
     Next is the <tt>/RST</tt> signal. There are a few requirements:
+    </p>
     <ul>
     <li>When the reset button is released, the <tt>/RST</tt> signal must only return to a high level
         on a rising clock edge</li>
@@ -145,7 +147,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <li><tt>/RST</tt> should be low on initial power-up and stay low long enough for the system to
         stabilize (e.g. all the capacitors charge) before being de-asserted automatically</li>
     </ul>
-    </p>
+
     <p>
     Ensuring the first condition is accomplished by having the reset button input go into the
     input of a D flip-flop, which is tied to the clock.  The output of the D flip-flop will only change

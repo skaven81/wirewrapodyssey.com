@@ -22,11 +22,13 @@ vim: ts=2 sts=2 sw=2 expandtab
     <h3>Why add an RTC &amp; timer?</h3>
     <p>
     There are three key functionalities enabled by adding the DS1511Y to the Odyssey:
+    </p>
     <ol>
       <li>256 bytes of battery-backed SRAM to store settings/options across reboots</li>
       <li>Clock stuff - read out the time and date, and measure the passage of time without having to count clock ticks</li>
       <li>Generate interrupts at defined, precise intervals</li>
     </ol>
+    <p>
     #3 is of the most direct use, particularly when programming something like a game.
     I can set the RTC to generate an interrupt as often as every 10 milliseconds. So for
     example I can set it for a 33 millisecond interval and every time the interrupt fires,
@@ -66,12 +68,14 @@ vim: ts=2 sts=2 sw=2 expandtab
     devices that can generate an interrupt, the interrupt is cleared when reading one of the
     control registers (control register A in this case). To test this behavior out, I implemented
     a <tt>:sleep</tt> function in the library. All it has to do is:
+    </p>
     <ul>
       <li>write 0 to <tt class=register>AL</tt></li>
       <li>set the IRQ3 vector to a function that writes 1 to the <tt class=register>AL</tt> register and reads the control register to clear the interrupt</li>
       <li>Write the appropriate control registers to enable the timer for the requested amount of time</li>
       <li>Go into a tight loop waiting for <tt class=register>AL</tt> to be non-zero</li>
     </ul>
+    <p>
     A similar approach can be taken to refresh the display in a game context. The game code
     can point the IRQ3 vector to a fuction that performs the display refresh, and clears the
     IRQ. The timer can be configured to reset and go again once it generates an interrupt (versus

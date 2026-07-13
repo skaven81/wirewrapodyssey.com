@@ -89,21 +89,23 @@ vim: ts=2 sts=2 sw=2 expandtab
 
     <p>
     For writes:
+    </p>
     <ul>
       <li><tt>SEQ4</tt> - peripheral should latch the address and data</li>
       <li><tt>SEQ5</tt> - <tt>/WRAM</tt> will be asserted</li>
       <li><tt>SEQ6</tt> - address and data remain asserted</li>
     </ul>
-    </p>
+
     <p>
     For reads:
+    </p>
     <ul>
       <li><tt>SEQ3</tt> - address is valid</li>
       <li><tt>SEQ4</tt> - address is valid</li>
       <li><tt>SEQ5</tt> - address is valid - CPU will commit value on data bus at end of clock</li>
       <li><tt>SEQ6</tt> - address is valid</li>
     </ul>
-    </p>
+
 
     <p>
     The peripheral thus needs to know which sequence number it is in, to know when to perform
@@ -129,6 +131,7 @@ vim: ts=2 sts=2 sw=2 expandtab
 
     <p>
     The timing diagram can be read as follows:
+    </p>
     <ul>
       <li><tt>SEQ</tt> - the microcode sequence number</li>
       <li><tt>CLK</tt> - the clock signal</li>
@@ -143,9 +146,10 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li><tt>DATA</tt> - the CPU data bus on read and write operations. <tt>0</tt> indicates valid data on the bus.</li>
       <li><tt>ATA HI</tt> - the ATA bus high byte status. <tt>0</tt> indicates valid data on the bus.</li>
     </ul>
+    <p>
     The dotted lines running vertically mark the critical timing for reads (left) and writes (right).
     What the resulting timing ensures is that the <tt>/CS0</tt> (or <tt>/CS1</tt>) signal is asserted
-    first, then a clock later, the <tt>/RD</tt> or </tt>/WR</tt> signal is asserted. After being released,
+    first, then a clock later, the <tt>/RD</tt> or <tt>/WR</tt> signal is asserted. After being released,
     a clock cycle passes before <tt>/CS0</tt> or <tt>/CS1</tt> are released.  This conforms (enough) to
     the "programmed I/O" (PIO) mode of ATA bus operation.
     </p>
@@ -164,7 +168,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     You can continue reading about the software implementation for the ATA port by
     visiting <a href="javascript:show_content('sw-ody')">Bootloader & ODY Executables</a>.
     </p>
- 
+
   </div>
 </body>
 </html>

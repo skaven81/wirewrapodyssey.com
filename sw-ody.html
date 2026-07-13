@@ -19,6 +19,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     It's helpful to walk the dependency tree backward from a place where executables
     actually work, to see what needs to be done:
+    </p>
     <ul>
       <li>Odyssey OS shell can run executable files</li>
       <ul>
@@ -34,10 +35,11 @@ vim: ts=2 sts=2 sw=2 expandtab
         </ul>
       </ul>
     </ul>
-    </p>
+
     <p>
     Getting from "programs all run in ROM" to "the Odyssey boots from ROM then runs
     programs from files on disk" required significant updates to every component:
+    </p>
     <ul>
       <li><b>Hardware:</b> An ATA port is needed to interface with a disk drive</li>
       <li><b>Assembler:</b> The assembler has to be able to generate executable files, on top
@@ -53,7 +55,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         and display, and the BIOS's principal job on system startup was to load an OS
         from disk (such as MS-DOS <tt>COMMAND.COM</tt>) and then get out of the way.</li>
     </ul>
-    </p>
+
 
     <h3>Hardware: the ATA port</h3>
     <p>
@@ -67,6 +69,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     Some key take-aways about interfacing with an ATA port:
+    </p>
     <ul>
       <li>While individual bytes read and written are in the expected format with
         most-significant bit at the beginning of the byte, multi-byte formats
@@ -81,10 +84,11 @@ vim: ts=2 sts=2 sw=2 expandtab
         which means your 8-bit computer has to be able to add and subtract QWORD sized
         (32-bit) numbers, which may require some tricky coding.</li>
     </ul>
-    </p>
+
     <p>
     Ultimately, the ATA interface code I've written so far for the Odyssey only supports
     a few functions, all of which are read-only:
+    </p>
     <ul>
       <li><tt>:ata_identify</tt> - sends the ATA "ID" command to the drive and
         writes the 512-byte identification data to an address in memory</li>
@@ -94,6 +98,7 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li><tt>:ata_read_lba</tt> - given a 28-bit LBA, sends a read command to
         the device and writes the 512-byte sector into RAM.</li>
     </ul>
+    <p>
     These functions (particularly <tt>:ata_read_lba</tt>) are the building blocks
     needed for making FAT16 work.
     </p>
@@ -146,6 +151,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     To interface with FAT16, I had to write a ton of code:
+    </p>
     <ul>
       <li>Mounting a FAT16 filesystem: <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/fat16_mount.asm>fat16_mount.asm</a></li>
       <ul>
@@ -190,7 +196,7 @@ vim: ts=2 sts=2 sw=2 expandtab
           size rather than the next whole cluster.</li>
       </ul>
     </ul>
-    </p>
+
     <p>
     Once I had all this code working and tested (which was no easy feat -- it took months of
     painstaking testing and analysis to make sure I was computing the correct values for all
@@ -203,6 +209,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     When considering how I should structure my executable file format, I wanted to keep things
     simple. So I narrowed down what I wanted to do with executables down to the smallest set
     of features I could think of that would work:
+    </p>
     <ol>
       <li>Executables should be able to tell the operating system that they should be loaded
         into main memory versus extended memory.  Programs that make extensive use of main memory
@@ -221,10 +228,11 @@ vim: ts=2 sts=2 sw=2 expandtab
         the program (most likely in ROM). The <tt>CALL</tt> instructions to these functions
         must not be "localized" to the executable's memory location.</li>
     </ol>
-    </p>
+
     <p>
     I accomplished this by adding some additional features to the <a href=https://github.com/skaven81/mycpu/blob/master/assembler/assembler.py>
     assembler</a>:
+    </p>
     <ul>
       <li>The assembler can now generate a <i>symbol table</i> which contains the memory
         offsets of important assembler features such as colon-prefixed <tt>:functions</tt>,
@@ -249,11 +257,12 @@ vim: ts=2 sts=2 sw=2 expandtab
         <li>The machine code for the program follows the address rewrite array.</li>
       </ul>
     </ul>
-    </p>
+
     <p>
     With the assembler able to write <tt>ODY</tt> files, a corresponding set of library
     functions were written into the operating system code in <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/lib/fat16_odyexe.asm>
     fat16_odyexe.asm</a>.
+    </p>
     <ul>
       <li><tt>:fat16_inspect_ody</tt> - reads the first 6 bytes of a file and makes sure that
         it is actually an ODY executable. Returns the flag byte so the OS can allocate memory
@@ -264,7 +273,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         address of the first byte of the program, which can be used with the <tt>CALL_D</tt>
         instruction to call the program.</li>
     </ul>
-    </p>
+
 
     <h3>Operating System: OdysseyOS redesign</h3>
     <p>
@@ -273,6 +282,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     of the system to an operating system which resides on disk. The boot sequence, which is
     in <a href=https://github.com/skaven81/mycpu/blob/master/os_shell/00-main.asm>00-main.asm</a>,
     performs the following steps:
+    </p>
     <ol>
       <li>Initialize core system functions, such as initializing the memory allocator, the
         heap, and the interrput vectors</li>
@@ -283,6 +293,7 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li>Looks for a file named <tt>SYSTEM.ODY</tt> in the root directory of the drive</li>
       <li>Loads the file into memory, performs ODY relocation, and executes it</li>
     </ol>
+    <p>
     This sequence means that the BIOS/ROM no longer needs code in it for any commands, a shell,
     or anything other than the static sequence of "booting" the machine. Everything else can
     be in <tt>SYSTEM.ODY</tt>. However, since RAM is scarce and ROM is already there, the ROM

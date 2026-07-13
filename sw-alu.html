@@ -18,21 +18,21 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <table class="bit-table">
       <tr>
-        <th>14</td>
-        <th>13</td>
-        <th>12</td>
-        <th>11</td>
-        <th>10</td>
-        <th>9</td>
-        <th>8</td>
-        <th>7</td>
-        <th>6</td>
-        <th>5</td>
-        <th>4</td>
-        <th>3</td>
-        <th>2</td>
-        <th>1</td>
-        <th>0</td>
+        <th>14</th>
+        <th>13</th>
+        <th>12</th>
+        <th>11</th>
+        <th>10</th>
+        <th>9</th>
+        <th>8</th>
+        <th>7</th>
+        <th>6</th>
+        <th>5</th>
+        <th>4</th>
+        <th>3</th>
+        <th>2</th>
+        <th>1</th>
+        <th>0</th>
       </tr>
       <tr>
         <td colspan=5><tt>ALUOP</tt></td>
@@ -47,14 +47,14 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <table class="bit-table">
       <tr>
-        <th>7</td>
-        <th>6</td>
-        <th>5</td>
-        <th>4</td>
-        <th>3</td>
-        <th>2</td>
-        <th>1</td>
-        <th>0</td>
+        <th>7</th>
+        <th>6</th>
+        <th>5</th>
+        <th>4</th>
+        <th>3</th>
+        <th>2</th>
+        <th>1</th>
+        <th>0</th>
       </tr>
       <tr>
         <td colspan=1><tt>Z</tt></td>
@@ -97,6 +97,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     With this code in place, I wrote some simple test scripts:
+    </p>
     <ul>
       <li><a href=https://github.com/skaven81/mycpu/blob/master/alu/alu_sim.py>alu_sim.py</a> - iterates through
         all possible input values for the combined 8-bit ALU, checking for any assertion errors.</li>
@@ -104,7 +105,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         running a REPL (read, execute, print, loop) on a simulated 8-bit ALU. This allows me to run quick verifications
         against what I see in the physical computer, and compare it with the simulation, to make sure that they match.</li>
     </ul>
-    </p>
+
     <p>
     Finally, <a href=https://github.com/skaven81/mycpu/blob/master/alu/gen_alu_roms.py>gen_alu_roms.py</a> performs
     the bitwise iteration to generate the binary ROM images to flash into the EEPROMs.
