@@ -146,6 +146,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     in <tt class=register>D</tt> will be <tt>0x5f02</tt> (because the IRQ ID is shifted left one bit). This
     results in the following table of addresses that are loaded into <tt class=register>D</tt> for each interrupt
     line:
+    </p>
     <ul>
       <li><tt>IRQ0 - 0x5f00</tt></li>
       <li><tt>IRQ1 - 0x5f02</tt></li>
@@ -156,6 +157,7 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li><tt>IRQ6 - 0x5f0c</tt></li>
       <li><tt>IRQ7 - 0x5f0e</tt></li>
     </ul>
+    <p>
     The data at <tt class=register>D</tt> is loaded into <tt class=register>PCH</tt> and then <tt class=register>D</tt>
     is incremented. The byte at that address is then loaded into <tt class=register>PCL</tt>. The opcode
     at <tt class=register>PC</tt> is then loaded and execution continues.
@@ -188,6 +190,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     that my software started failing in really weird ways. After some painstaking debugging with
     the logic analyzer, I discovered that the problem was with returning from the interrupt handler
     safely. Here's the unsafe series of events that caused the problem:
+    </p>
     <ol>
       <li>ALU opcode executes, sets status flags</li>
       <li>IRQ opcode executes, as IRQ was requested during previous instruction</li>
@@ -195,6 +198,7 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li>Return from interrupt handler</li>
       <li>Branch instruction executes, expecting status flags to be set from ALU opcode in #1, but instead finds status flags from #3</li>
     </ol>
+    <p>
     I needed a way to preserve the status flags during interrupt handler execution, and restore
     them during the <tt>RETI</tt> instruction.
     </p>
@@ -215,6 +219,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     This gives four states based on the two control signals:
+    </p>
     <ul>
       <li><b>Normal operation</b> - <tt>IRQMASK=0</tt> and <tt>STRES=0</tt>: <tt>/WSTAT</tt>
         writes the current ALU flags to <b>both</b> the primary bits [2:0] and the backup bits
@@ -231,6 +236,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         bits are also retained unchanged. This is the intended restore state.
         </li>
     </ul>
+    <p>
     The fourth state, <tt>IRQMASK=0 + STRES=1</tt>, is not a useful state. When it occurs,
     <tt>/WSTAT</tt> writes the backup Q value to primary [2:0] (the STRES=1 path -- a correct
     restore), but simultaneously writes the <b>current ALU flag output</b> to backup [7:5]
@@ -254,6 +260,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     were occurring when a <tt>RETI</tt> instruction would execute with an invalid return address.
     Scrolling further back in the trace to the <tt>IRQ</tt> instruction that was being returned from,
     showed an odd sequence of events. I'm using arbitrary addresses here to demonstrate what I saw.
+    </p>
     <ul>
       <li><tt>0x1d47</tt> <tt>POP_BH</tt> - at the end of a typical function, registers that were
         saved to the stack are being popped back into place</li>
@@ -267,6 +274,7 @@ vim: ts=2 sts=2 sw=2 expandtab
       <li><tt>0x1d4c</tt> <tt>POP_DL</tt></li>
       <li><tt>0x1d4d</tt> <tt>RET</tt> - Jumps to an invalid address and CRASH!!</li>
     </ul>
+    <p>
     Some invalid opcode <tt>0xFE</tt> was being executed just before an <tt>IRQ</tt> (which is <tt>0xEE</tt>)
     instruction. And that was causing a main program instruction to be skipped!  The skipped instruction
     in this case was a <tt>POP</tt>, which meant that when the <tt>RET</tt> was called, the return address

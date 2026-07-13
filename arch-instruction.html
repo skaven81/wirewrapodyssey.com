@@ -59,30 +59,30 @@ vim: ts=2 sts=2 sw=2 expandtab
         Click for fullsize in a new tab.
       </figcaption>
     </figure>
- 
+
     <p>
     At some point, I managed to break out of my mental block, and realized I could greatly simplify
     the design, as well as enable new features over time, by leveraging microcoding. With some further
     thought I came up with the following instruction format:
-    <p>
+    </p>
 
     <table class="bit-table">
     <tr>
-      <th>14</td>
-      <th>13</td>
-      <th>12</td>
-      <th>11</td>
-      <th>10</td>
-      <th>9</td>
-      <th>8</td>
-      <th>7</td>
-      <th>6</td>
-      <th>5</td>
-      <th>4</td>
-      <th>3</td>
-      <th>2</td>
-      <th>1</td>
-      <th>0</td>
+      <th>14</th>
+      <th>13</th>
+      <th>12</th>
+      <th>11</th>
+      <th>10</th>
+      <th>9</th>
+      <th>8</th>
+      <th>7</th>
+      <th>6</th>
+      <th>5</th>
+      <th>4</th>
+      <th>3</th>
+      <th>2</th>
+      <th>1</th>
+      <th>0</th>
     </tr>
     <tr>
       <td colspan=8><tt>OPCODE</tt></td>
@@ -111,12 +111,13 @@ vim: ts=2 sts=2 sw=2 expandtab
   <h4><tt>O/E/Z</tt></h4>
   <p>
   These are the flags from the last ALU operation.
+  </p>
   <ul>
   <li><tt><b>O</b></tt> - Overflow: the last operation resulted in a carry-out/overflow</li>
   <li><tt><b>E</b></tt> - Equal: the last operation's operands were equivalent (without regard to what the result of the operation was</li>
   <li><tt><b>Z</b></tt> - Zero: the result of the last operation was zero</li>
   </ul>
-  </p>
+
 
   <h4><tt>SEQ</tt></h4>
   <p>
@@ -148,7 +149,7 @@ vim: ts=2 sts=2 sw=2 expandtab
   I get into the details of how I generate the control ROMs, which in turn influences
   how the assembler writes out machine code.
   </p>
-  
+
   <h4>Example 1: <tt>NOP</tt></h4>
   <code><pre>
   [0x00] NOP
@@ -199,6 +200,7 @@ vim: ts=2 sts=2 sw=2 expandtab
   </p>
   <p>
   Going through each micro-op:
+  </p>
   <ul>
     <li><tt>0</tt> - increment the <tt class=register>PC</tt> so it points at the next byte in the program (which
         is the high byte of the target address)</li>
@@ -219,7 +221,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         ROM put the next opcode onto the data bus, and the new opcode is written to the <tt>OPCODE</tt>
         register and the <tt>SEQ</tt> counter is reset, moving to the next instruction.</li>
   </ul>
-  </p>
+
 
   <h4>Example 3: <tt>JEQ</tt></h4>
   <code><pre>
@@ -245,6 +247,7 @@ vim: ts=2 sts=2 sw=2 expandtab
   </p>
   <p>
   Let's look at the sequence if <tt>E</tt> is clear:
+  </p>
   <ul>
     <li><tt>x 0</tt> - increment the <tt class=register>PC</tt> so it points at the next byte in the program (which
         is the high byte of the jump address)</li>
@@ -252,9 +255,10 @@ vim: ts=2 sts=2 sw=2 expandtab
     <li><tt>e 2</tt> - we are not jumping, so just move to the next byte, which is the next opcode</li>
     <li><tt>e 3</tt> - load the next opcode from the <tt class=register>PC</tt> address and reset the sequence counter</li>
   </ul>
-  </p>
+
   <p>
   And the sequence if <tt>E</tt> is set:
+  </p>
   <ul>
     <li><tt>x 0</tt> - increment the <tt class=register>PC</tt> so it points at the next byte in the program (which
         is the high byte of the jump address)</li>
@@ -263,7 +267,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <li><tt>E 3</tt> - load the high byte of the target address into <tt class=register>PCH</tt> by copying it out of <tt class=register>TD</tt>.</li>
     <li><tt>E 4</tt> - load the next opcode from the (now updated) <tt class=register>PC</tt> address and reset the sequence counter</li>
   </ul>
-  </p>
+
 
   <h3>Pros/Cons of this approach</h3>
   <h4>Pros</h4>

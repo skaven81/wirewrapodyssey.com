@@ -22,12 +22,14 @@ vim: ts=2 sts=2 sw=2 expandtab
     register that is implemented with a pair of <tt>74x191</tt> 4-bit up/down counters.
     Control of these counters is achieved with two control signals, resulting in four
     possible states:
+    </p>
     <ul>
       <li><tt>SPSEL 00</tt> - do nothing</li>
       <li><tt>SPSEL 01</tt> - do nothing</li>
       <li><tt>SPSEL 10</tt> - increment <tt class=register>SP</tt></li>
       <li><tt>SPSEL 11</tt> - decrement <tt class=register>SP</tt></li>
     </ul>
+    <p>
     There is also a <tt>/SPADDR</tt> control signal that when pulled low, presents the
     <tt class=register>SP</tt> register to the low 8 bits of the address bus, and
     a constant <tt>0xbf</tt> to the high 8 bits of the address bus.

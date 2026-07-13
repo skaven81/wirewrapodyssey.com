@@ -20,6 +20,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     Since these registers are meant to be (and are) used by the microcode,
     touching any of these registers in normal userspace programs can be
     dangerous. For example, this instruction sequence is dangerous:
+    </p>
     <code><pre>
     LD_TD 0xdead    # load byte at 0xdead into TD register
     JMP .location
@@ -27,6 +28,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     .location
     ST_TD 0xbeef    # write byte in TD to 0xbeef
     </pre></code>
+    <p>
     At first glance it all seems fine -- a byte will be loaded into
     register, then we jump to another place in the code, where the byte in <tt class=register>TD</tt>
     is written to some other address.
@@ -34,6 +36,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     It is dangerous because the <tt>JMP</tt> instruction clobbers the the <tt class=register>TD</tt>
     register:
+    </p>
     <code><pre>
     [0x20] JMP @addr
     x 0 IncrementPC
@@ -45,11 +48,12 @@ vim: ts=2 sts=2 sw=2 expandtab
     x 3 DataBusTD WritePCH
     x 4 NextInstruction
     </pre></code>
+    <p>
     That means when the <tt>ST_TD</tt> instruction comes along, <tt class=register>TD</tt>
     will contain the high byte of the target address of the <tt>JMP</tt>
     instruction, not the value loaded in the <tt>LD_TD</tt> instruction.
     </p>
-    
+
     <h3>So why have opcodes that touch these registers?</h3>
     <p>
     One might similarly ask why John Carmack used the magic number <tt>0x5F3759DF</tt>
@@ -61,13 +65,14 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     In the case of the Odyssey CPU, the transfer registers can be used safely if:
+    </p>
     <ol>
       <li>No opcodes that touch the transfer registers are used in between - this just means careful code design.</li>
       <li>Interrupts are disabled for the code block using the transfer registers - not only does handling
         an interrupt clobber the transfer registers, but code happening inside the interrupt handler
         is likely to do the same.</li>
     </ol>
-    </p>
+
 
   </div>
 </body>

@@ -23,12 +23,14 @@ vim: ts=2 sts=2 sw=2 expandtab
     <h3>Control Signal Design</h3>
     <p>
     The behavior of the program counter can be distilled down to the following behaviors:
+    </p>
     <ul>
     <li>Do nothing</li> 
     <li>Increment</li>
     <li>Load a new address from the data bus</li>
     <li>Present the PC address to the address bus</li>
     </ul>
+    <p>
     I found that the <tt>74x161</tt> synchronous 4-bit counters with parallel load would
     work well for the program counter register. The outputs of the '161 counters are fed into some
     <tt>74x245</tt> bus transceivers, to allow control of whether the PC value should be
@@ -42,6 +44,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     bus (or not) separately from determining whether the register should be preloaded with
     new data from the address bus or incremented on the next clock edge, I broke out the
     control signals into two pairs, resulting in the following truth tables:
+    </p>
     <ul>
     <li><tt>PCRSEL 00</tt> - do nothing</li>
     <li><tt>PCRSEL 01</tt> - <tt class=register>PC</tt> presented to address bus</li>
@@ -54,6 +57,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <li><tt>PCWSEL 10</tt> - Write data bus to <tt class=register>PCL</tt></li>
     <li><tt>PCWSEL 11</tt> - Write data bus to <tt class=register>PCH</tt></li>
     </ul>
+    <p>
     These signals were chosen somewhat strategically.
     </p>
     <p>
@@ -79,6 +83,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <figure class='figure-container'>
       <div style='overflow:auto'>
         <a href="photo/pc_schem.jpg" target=_blank><img src="photo/pc_schem_web.jpg"></a>
+      </div>
       <figcaption class='figure-caption'>
         Design notes and Logisim schematic for the program counter control signals.
         Click to open full size in new tab.

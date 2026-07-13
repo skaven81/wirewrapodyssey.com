@@ -94,6 +94,7 @@ vim: ts=2 sts=2 sw=2 expandtab
     <p>
     The keyboard controller handles all the complexity of talking to the keyboard and handling
     the PS/2 scancodes. The CPU can read from two registers:
+    </p>
     <ul>
       <li><tt>0xc000</tt> - ASCII code for the last keystroke (or <tt>0x00</tt> for make/break events on control keys</li>
       <li><tt>0xc001</tt> - Keyboard flags:
@@ -108,7 +109,7 @@ vim: ts=2 sts=2 sw=2 expandtab
         <li><tt>0x80</tt> - SCROLLOCK is active</li>
       </ul>
     </ul>
-    </p>
+
     <p>
     When a keystroke (or key release) occurs, the keyboard controller will pulse the
     <tt>/CPU_INT</tt> signal low (see the diagram above). This causes the <tt>/S/R</tt>
