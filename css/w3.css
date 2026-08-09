@@ -237,28 +237,186 @@ hr{border:0;border-top:1px solid #eee;margin:20px 0}
 .accordion{margin-left:15px;}
 .w3-strong{font-weight:bolder}
 .top-header{margin-bottom:10px; margin-top:10px; display:flex; align-items:center;}
+/* Truncate long section titles instead of letting them push the theme
+   switch off the edge of the header on narrow screens. */
+#section-header{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+/* .w3-top is `position:fixed; width:100%` with no `left`, so on screens
+   wide enough for the docked 250px sidebar (see .w3-sidebar.w3-collapse
+   below) its static position starts after the sidebar while still being
+   100% of the *viewport* width -- overflowing 250px past the right edge.
+   That dead zone was invisible until content (the theme switch) tried to
+   anchor to its right edge, so pin the bar to the real visible area. */
+@media (min-width:993px) {
+  .w3-main .w3-top {left: 250px; right: 0; width: auto;}
+}
+
+/* Light/dark theme colors. Defaults to following the OS/browser
+   color-scheme preference (see the prefers-color-scheme block below).
+   The theme switch widget in the header can force light or dark
+   regardless of OS preference by setting data-theme="light|dark" on
+   <html>; those attribute selectors are more specific than the plain
+   :root below, so they win the cascade without needing !important.
+   "Auto" mode removes the attribute, falling back to this behavior. */
+:root {
+  --ww-bg: #fff;
+  --ww-text: #000;
+  --ww-sidebar-bg: #fff;
+  --ww-border: #ccc;
+  --ww-hover-bg: #ccc;
+  --ww-register-bg: #f0f0f0;
+  --ww-register-text: #000;
+  --ww-register-border: #000;
+  --ww-figure-caption: #666;
+  --ww-tip-bg: lightgreen;
+  --ww-tip-border: darkgreen;
+  --ww-tip-text: #000;
+  --ww-table-header-bg: #ccc;
+  --ww-table-border: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ww-bg: #121212;
+    --ww-text: #e8e8e8;
+    --ww-sidebar-bg: #1c1c1c;
+    --ww-border: #444;
+    --ww-hover-bg: #3a3a3a;
+    --ww-register-bg: #2b2b2b;
+    --ww-register-text: #e8e8e8;
+    --ww-register-border: #999;
+    --ww-figure-caption: #aaa;
+    --ww-tip-bg: #163a1a;
+    --ww-tip-border: #4caf50;
+    --ww-tip-text: #d9f2db;
+    --ww-table-header-bg: #333;
+    --ww-table-border: #777;
+  }
+}
+
+:root[data-theme="light"] {
+  --ww-bg: #fff;
+  --ww-text: #000;
+  --ww-sidebar-bg: #fff;
+  --ww-border: #ccc;
+  --ww-hover-bg: #ccc;
+  --ww-register-bg: #f0f0f0;
+  --ww-register-text: #000;
+  --ww-register-border: #000;
+  --ww-figure-caption: #666;
+  --ww-tip-bg: lightgreen;
+  --ww-tip-border: darkgreen;
+  --ww-tip-text: #000;
+  --ww-table-header-bg: #ccc;
+  --ww-table-border: #000;
+}
+
+:root[data-theme="dark"] {
+  --ww-bg: #121212;
+  --ww-text: #e8e8e8;
+  --ww-sidebar-bg: #1c1c1c;
+  --ww-border: #444;
+  --ww-hover-bg: #3a3a3a;
+  --ww-register-bg: #2b2b2b;
+  --ww-register-text: #e8e8e8;
+  --ww-register-border: #999;
+  --ww-figure-caption: #aaa;
+  --ww-tip-bg: #163a1a;
+  --ww-tip-border: #4caf50;
+  --ww-tip-text: #d9f2db;
+  --ww-table-header-bg: #333;
+  --ww-table-border: #777;
+}
+
+html, body {background-color: var(--ww-bg); color: var(--ww-text);}
+.w3-sidebar {background-color: var(--ww-sidebar-bg) !important; color: var(--ww-text); border-right: 1px solid var(--ww-border);}
+.w3-border-bottom {border-bottom-color: var(--ww-border) !important;}
+.w3-button:hover {background-color: var(--ww-hover-bg) !important;}
+
+/* Theme switch: a 3-position panel switch (Light / Auto / Dark), styled
+   like the toggle and DIP switches the Odyssey itself is full of, rather
+   than a generic sun/moon control. The colored thumb previews each mode:
+   paper-white for Light, brushed steel for Auto, charcoal for Dark. */
+.theme-switch {
+  --active-index: 1;
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  background-color: rgba(0,0,0,0.18);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+}
+.theme-switch[data-active="0"] {--thumb-color: #f4f1ea; --thumb-text: #142433;}
+.theme-switch[data-active="1"] {--thumb-color: #a9b9c6; --thumb-text: #142433;}
+.theme-switch[data-active="2"] {--thumb-color: #1c1c1c; --thumb-text: #f4f1ea;}
+.theme-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  height: calc(100% - 6px);
+  border-radius: 999px;
+  background-color: var(--thumb-color, #a9b9c6);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  transform: translateX(calc(var(--active-index, 1) * 100%));
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), background-color 0.2s ease;
+}
+.theme-switch-option {
+  position: relative;
+  z-index: 1;
+  min-width: 3.6em;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.78);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.theme-switch-option:hover {color: #fff;}
+.theme-switch-option:focus-visible {outline: 2px solid #fff; outline-offset: 2px;}
+.theme-switch-option[aria-checked="true"] {color: var(--thumb-text, #142433);}
+@media (prefers-reduced-motion: reduce) {
+  .theme-switch-thumb {transition: none;}
+}
+@media (max-width: 500px) {
+  .theme-switch-option {min-width: 2.4em; font-size: 10px; padding: 4px 5px;}
+}
 
 .section-body{max-width:100%;}
-.register { 
+.register {
     display: inline-block; /* Make the container an inline block */
-    background-color: #f0f0f0; /* Set the background color to gray */
-    color: #000; /* Set text color to black */
+    background-color: var(--ww-register-bg);
+    color: var(--ww-register-text);
     padding: 2px 4px; /* Add padding for spacing inside the container */
-    border: 1px solid #000; /* Add a black border */
+    border: 1px solid var(--ww-register-border);
     border-radius: 6px; /* Add rounded corners */
     font-family: 'Courier New', monospace; /* Set a monospaced font */
     font-weight: bold; /* Make the text bold */
     height: 1.6em;
 }
 
-.figure-container {border:1px solid #ccc; padding:10px; margin:0; display:inline-block;}
+/* Figures hold photos/schematics/diagrams that assume a light background
+   (white paper, black ink), so the card stays light in both color schemes;
+   only the border adapts so it stays visible against a dark page. */
+.figure-container {border:1px solid var(--ww-border); background-color:#fff; padding:10px; margin:0; display:inline-block;}
 .figure-container img {max-width:100%; height:auto; display:block;}
 .figure-container iframe {width:100%; height:400px; display:block;}
-.figure-caption {font-style:italic; color:#666; margin-top:8px; word-wrap:break-word;}
+.figure-caption {font-style:italic; color: var(--ww-figure-caption); margin-top:8px; word-wrap:break-word;}
 
 .tip-container {
-  background-color: lightgreen;
-  border: 2px solid darkgreen;
+  background-color: var(--ww-tip-bg);
+  color: var(--ww-tip-text);
+  border: 2px solid var(--ww-tip-border);
   border-radius: 10px;
   padding: 15px;
   margin: 10px 0;
@@ -266,11 +424,14 @@ hr{border:0;border-top:1px solid #eee;margin:20px 0}
 }
 
 .bit-table {border-collapse:collapse;}
-.bit-table th, .bit-table td {border:1px solid black; width:34px; text-align:center; padding:0;}
-.bit-table th {background-color:#ccc; font-weight:bold;}
+.bit-table th, .bit-table td {border:1px solid var(--ww-table-border); width:34px; text-align:center; padding:0;}
+.bit-table th {background-color: var(--ww-table-header-bg); font-weight:bold;}
 
 .nowrap-table td {white-space:nowrap;}
 
+/* Font-table renders a literal on/off pixel bitmap (black square = lit
+   pixel), so it's kept hard-coded black/white in both color schemes --
+   theming it would change the meaning of the figure. */
 .font-table {border-collapse:collapse;}
 .font-table th, .font-table td {border:1px solid black; width:50px; height:50px; text-align:center; padding:2px;}
 .font-table th {background-color:black; color:white;}

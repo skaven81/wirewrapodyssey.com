@@ -7,6 +7,20 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
 <head>
   <title>Wire Wrap Odyssey</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    // Apply any saved theme override before first paint, so there's no
+    // flash of the wrong theme. "Auto" (the default) needs no attribute,
+    // since the CSS already falls back to prefers-color-scheme.
+    (function () {
+      try {
+        var saved = localStorage.getItem('ww-theme');
+        if (saved === 'light' || saved === 'dark') {
+          document.documentElement.setAttribute('data-theme', saved);
+        }
+      } catch (e) {}
+    })();
+  </script>
   <base href="/index.html">
   <link rel="stylesheet" href="/css/w3.css">
   <link rel="stylesheet" href="/css/w3-theme-blue.css">
@@ -83,6 +97,12 @@ Uses W3 Schools' Material template: https://www.w3schools.com/w3css/tryit.asp?fi
     <p class="top-header">
       <i class="fa fa-bars w3-button w3-blue w3-hide-large w3-xlarge" onclick="w3_open()"></i>
       <span id="section-header" class="w3-strong w3-large"><!-- show_content(id) function inserts title here --></span>
+      <span class="theme-switch" id="themeSwitch" role="radiogroup" aria-label="Color theme">
+        <span class="theme-switch-thumb" aria-hidden="true"></span>
+        <button type="button" class="theme-switch-option" data-theme-value="light" role="radio" aria-checked="false">Light</button>
+        <button type="button" class="theme-switch-option" data-theme-value="auto" role="radio" aria-checked="true">Auto</button>
+        <button type="button" class="theme-switch-option" data-theme-value="dark" role="radio" aria-checked="false">Dark</button>
+      </span>
     </p>
   </div>
 
@@ -224,6 +244,60 @@ function generateEmailLink() {
       console.log("Did not find contactParagraph");
     }
 }
+
+// Theme switch: Light / Auto / Dark. "Auto" removes the override and lets
+// the CSS prefers-color-scheme rules take over; Light/Dark force a choice
+// via a data-theme attribute on <html>, which wins the CSS cascade because
+// attribute selectors are more specific than the plain :root fallback.
+var THEME_STORAGE_KEY = 'ww-theme';
+var THEME_ORDER = ['light', 'auto', 'dark'];
+
+function getStoredTheme() {
+  var saved;
+  try {
+    saved = localStorage.getItem(THEME_STORAGE_KEY);
+  } catch (e) {
+    saved = null;
+  }
+  return THEME_ORDER.indexOf(saved) !== -1 ? saved : 'auto';
+}
+
+function updateThemeSwitchUI(theme) {
+  var group = document.getElementById('themeSwitch');
+  if (!group) return;
+  var index = THEME_ORDER.indexOf(theme);
+  group.style.setProperty('--active-index', index);
+  group.setAttribute('data-active', index);
+  var options = group.querySelectorAll('.theme-switch-option');
+  for (var i = 0; i < options.length; i++) {
+    var checked = options[i].getAttribute('data-theme-value') === theme;
+    options[i].setAttribute('aria-checked', checked ? 'true' : 'false');
+  }
+}
+
+function applyTheme(theme) {
+  if (theme === 'light' || theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', theme);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (e) {}
+  updateThemeSwitchUI(theme);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  var group = document.getElementById('themeSwitch');
+  if (!group) return;
+  updateThemeSwitchUI(getStoredTheme());
+  var options = group.querySelectorAll('.theme-switch-option');
+  for (var i = 0; i < options.length; i++) {
+    options[i].addEventListener('click', function () {
+      applyTheme(this.getAttribute('data-theme-value'));
+    });
+  }
+});
 </script>
    
 </body>
