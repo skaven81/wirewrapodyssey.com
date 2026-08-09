@@ -1,0 +1,127 @@
+<!--
+vim: ts=2 sts=2 sw=2 expandtab
+-->
+<html>
+<body>
+  <div class='section-title'>
+    Peripherals: Programmable Timer
+  </div>
+  <div class='section-body'>
+    <h2>Peripherals: Programmable Timer</h2>
+
+    <h3>Overview</h3>
+    <p>
+    The DS1511Y RTC already gives the Odyssey one configurable periodic
+    interrupt (see <a href="javascript:show_content('periph-timer')">RTC &amp;
+    Timer</a>), but that's one timer, running off one clock, doing one job
+    at a time. To get real one-shot delays, jitter-free periodic interrupts,
+    cycle-accurate profiling, and a tone generator for a piezo speaker &mdash;
+    all independently, all live at once &mdash; I added a second timer
+    peripheral built around an 82C54-compatible programmable interval timer,
+    the same chip family that did double duty as the system timer in the
+    original IBM PC. It packs three completely independent 16-bit countdown
+    counters onto one chip, each with its own selectable clock source, all
+    sharing a single interrupt line (<tt>IRQ2</tt>) and a single block of
+    address space, <tt>0xC400-0xC4FF</tt>. I number the three counters
+    Timer 1, 2, and 3, to keep them distinct from the RTC's own interrupt,
+    which I call Timer 0.
+    </p>
+
+    <h3>Slicing Up 0xC400-0xC4FF</h3>
+    <p>
+    The 82C54 itself only needs four addresses: three 8-bit counter
+    registers and one control/read-back register, mapped straight through
+    at <tt>0xC480-0xC482</tt> and <tt>0xC483</tt>. Everything else in the
+    page is Odyssey-side glue, kept to as few extra chips as I could
+    manage.
+    </p>
+    <p>
+    Clock source selection isn't part of the 82C54 at all &mdash; the chip just
+    exposes bare CLK pins &mdash; so I built an external 8-bit register at
+    <tt>0xC440</tt> that picks one of four clock sources (a 1.8432MHz
+    oscillator, the 32.768kHz RTC crystal, a 1.000MHz oscillator, or the
+    CPU's own system clock) independently per timer, two bits apiece across
+    the low six bits. The top two bits of that same register are the
+    tone-select field, described below.
+    </p>
+    <p>
+    The IRQ side needed a signal the 82C54 doesn't provide either &mdash; OUT
+    is just a level, not an interrupt request. Rather than burn a chip
+    decoding a dedicated "clear IRQ" address per timer, I decoded the clear
+    signals directly off address lines A5, A4, and A3 within the
+    <tt>0xC400-0xC4FF</tt> page, independent of every other address decode
+    in that range. That means those three bits can be ORed onto
+    <i>any</i> other address in the page &mdash; a counter read, a control
+    word write, even a bare no-op access &mdash; and the corresponding
+    timer's IRQ latch clears as a side effect of that same bus cycle, for
+    free. <tt>0xC4A0</tt>, for example, is just "access Counter 1"
+    (<tt>0xC480</tt>) OR'd with "clear Timer 1's latch" (<tt>0x0020</tt>)
+    landing on one address. It costs nothing extra in hardware or cycles,
+    and it means an ISR reloading a counter can clear that timer's own
+    latch in the very same instruction.
+    </p>
+    <p>
+    Reading which timer(s) actually fired takes one more address:
+    <tt>0xC404</tt> returns all three latch bits in a single byte (bit 5 =
+    Timer 1, bit 6 = Timer 2, bit 7 = Timer 3), so the ISR can snapshot the
+    whole peripheral's state in one read instead of polling three separate
+    status lines.
+    </p>
+
+    <h3>Interrupt Latches, and Excluding a Timer for Tone Generation</h3>
+    <p>
+    The 82C54's OUT pins toggle in whatever pattern their mode dictates
+    &mdash; useless as a level-triggered interrupt source on their own. So each
+    timer's OUT feeds the CLK input of a dedicated 74HC74 flip-flop with D
+    tied to Vcc: any rising edge on OUT latches a 1 into Q, and it stays
+    there until software clears it via the address trick above. All three
+    Qs used to feed a 3-input NOR gate directly, whose output is the
+    Odyssey's active-low <tt>/IRQ2</tt> line &mdash; any latch set, IRQ2
+    asserted.
+    </p>
+    <p>
+    Adding tone generation meant inserting one more piece into that path.
+    Each Q now feeds a 74HC08 AND gate before the NOR, and the second input
+    of each AND gate comes from a 74HC139 2-to-4 decoder driven by the
+    tone-select bits at <tt>0xC440[7:6]</tt>. The decoder's four active-low
+    outputs are <tt>/Y0</tt> (tone off), <tt>/Y1</tt>, <tt>/Y2</tt>, and
+    <tt>/Y3</tt>, one per timer. Normally those three AND-gate inputs sit
+    high and the gates are transparent, so the circuit behaves exactly as
+    it did before I added tone generation. But select a timer for tone, and
+    its <tt>/Yn</tt> drops low, forcing that one AND gate's output low
+    regardless of what its latch is doing &mdash; that timer's interrupt
+    simply never reaches the NOR gate, no matter how many edges OUT
+    produces.
+    </p>
+    <p>
+    That's what makes Mode 3 usable at all. Mode 3 turns a counter into a
+    free-running square wave, exactly what you want feeding a piezo
+    speaker, but its OUT toggles on both halves of the cycle, so at audio
+    frequencies it would otherwise fire the latch (and <tt>IRQ2</tt>)
+    thousands of times a second. With the AND-gate exclusion in place,
+    whichever timer is selected for tone can run Mode 3 freely while the
+    other two keep interrupting normally. The same two select bits also
+    drive a 74HC153 mux that routes the chosen timer's raw OUT &mdash; tapped
+    before the flip-flop, so it's still the live square wave, not a latched
+    edge &mdash; to a 2N2222 transistor through a 1K base resistor, switching a
+    piezo speaker wired with a 330&Omega; series resistor. Selecting and
+    excluding happen from the same two bits in the same register write, so
+    there's no separate masking step required in software.
+    </p>
+    <div class=tip-container>
+    The exclusion only protects the timer currently selected. A timer left
+    running in Mode 3 after tone selection moves elsewhere &mdash; or one that
+    was never selected in the first place &mdash; still storms <tt>IRQ2</tt>.
+    The mode and the selection have to change together.
+    </div>
+    <p>
+    Of the chip's remaining modes, Mode 0 (count down once and stop) and
+    Mode 2 (self-reloading rate generator, zero jitter) round out the set I
+    actually use, for one-shot delays/profiling and steady periodic
+    interrupts respectively. The rest need a hardware <tt>GATE</tt> input I
+    never wired up, or don't produce the clean single-edge trigger the
+    latch design above depends on.
+    </p>
+  </div>
+</body>
+</html>

@@ -33,6 +33,12 @@ vim: ts=2 sts=2 sw=2 expandtab
         DS1511Y also has a 256 byte battery-backed SRAM that can be used to store settings that
         persist across reboots (in the early x86 computers, this is where the BIOS settings
         were stored).</li>
+      <li><a href="javascript:show_content('periph-ptmr')">Programmable Timer</a> - An 82C54-compatible
+        programmable interval timer, the classic PC/XT "PIT" chip, provides three independent
+        16-bit countdown timers (Timer 1/2/3) sharing IRQ2 - handy for one-shot delays, fixed-rate
+        interrupts, and software profiling. One of the three can also be dedicated to generating
+        a tone on a piezo speaker, with some clever glue logic that excludes it from the interrupt
+        line while it's singing.</li>
       <li><a href="javascript:show_content('periph-serial')">RS232 UART</a> - An 82C52 UART
         provides a single RS232 serial port capable of up to 115200 baud. This old chip (designed
         to be paired with the 8086) was chosen over the more popular 16550 UART, as the 82C52
