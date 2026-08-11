@@ -14,13 +14,15 @@ vim: ts=2 sts=2 sw=2 expandtab
     The DS1511Y RTC already gives the Odyssey one configurable periodic
     interrupt (see <a href="javascript:show_content('periph-timer')">RTC &amp;
     Timer</a>), but that's one timer, running off one clock, doing one job
-    at a time. To get real one-shot delays, jitter-free periodic interrupts,
-    cycle-accurate profiling, and a tone generator for a piezo speaker &mdash;
-    all independently, all live at once &mdash; I added a second timer
+    at a time. Its watchdog timer can be programmed down to hundredths of
+    a second, which is certainly useful, but not particularly high precision.
+    To get real high-precision one-shot delays, jitter-free periodic interrupts,
+    cycle-accurate profiling, and a tone generator for a piezo speaker -
+    all independently, all live at once - I added a second timer
     peripheral built around an 82C54-compatible programmable interval timer,
     the same chip family that did double duty as the system timer in the
-    original IBM PC. It packs three completely independent 16-bit countdown
-    counters onto one chip, each with its own selectable clock source, all
+    original IBM PC. It has three independent 16-bit countdown
+    on one chip, each with its own selectable clock source, all
     sharing a single interrupt line (<tt>IRQ2</tt>) and a single block of
     address space, <tt>0xC400-0xC4FF</tt>. I number the three counters
     Timer 1, 2, and 3, to keep them distinct from the RTC's own interrupt,
@@ -68,16 +70,61 @@ vim: ts=2 sts=2 sw=2 expandtab
     status lines.
     </p>
 
+    <table class="bit-table">
+    <tr>
+      <th>15</th>
+      <th>14</th>
+      <th>13</th>
+      <th>12</th>
+      <th>11</th>
+      <th>10</th>
+      <th>9</th>
+      <th>8</th>
+      <th>7</th>
+      <th>6</th>
+      <th>5</th>
+      <th>4</th>
+      <th>3</th>
+      <th>2</th>
+      <th>1</th>
+      <th>0</th>
+    </tr>
+    <tr>
+      <td colspan=8><tt>0xc4</tt></td>
+      <td colspan=1><tt>Select 82C54</tt></td>
+      <td colspan=1><tt>Clock source register</tt></td>
+      <td colspan=1><tt>Clear T1 latch</tt></td>
+      <td colspan=1><tt>Clear T2 latch</tt></td>
+      <td colspan=1><tt>Clear T3 latch</tt></td>
+      <td colspan=1><tt>IRQ latch</tt></td>
+      <td colspan=2><tt>82C54 registers</tt></td>
+    </tr>
+  </table>
+
     <h3>Interrupt Latches, and Excluding a Timer for Tone Generation</h3>
     <p>
-    The 82C54's OUT pins toggle in whatever pattern their mode dictates
-    &mdash; useless as a level-triggered interrupt source on their own. So each
+    The 82C54's OUT pins toggle in whatever pattern their mode dictates:
+    <ul>
+      <li><b>Mode 0:</b> OUT goes high on terminal count, stays there</li>
+      <li><b>Mode 1:</b> Hardware triggered one-shot timer, requires GATE signal</li>
+      <li><b>Mode 2:</b> Rate generator: OUT pulses high on terminal count, resets itself</li>
+      <li><b>Mode 3:</b> Square wave generator: OUT goes high after ~50% of the count, then low again at terminal count</li>
+      <li><b>Mode 4:</b> Software triggered strobe: OUT goes low for one clock pulse at terminal count</li>
+      <li><b>Mode 5:</b> Hardware triggered strobe, same as mode 4 but requires GATE signal</li>
+    </ul>
+    The modes that require a GATE signal are not useful for the Odyssey,
+    and even the modes used in the Odyssey (modes 0, 2, and 3) are useless
+    as level-triggered interrupt sources on their own. So each
     timer's OUT feeds the CLK input of a dedicated 74HC74 flip-flop with D
     tied to Vcc: any rising edge on OUT latches a 1 into Q, and it stays
-    there until software clears it via the address trick above. All three
-    Qs used to feed a 3-input NOR gate directly, whose output is the
-    Odyssey's active-low <tt>/IRQ2</tt> line &mdash; any latch set, IRQ2
-    asserted.
+    there until software clears it via the address trick noted above. The
+    "clear latch" address lines are routed through simple combinatorial gates
+    so that when set, and in the <tt>0xc4</tt> range, and the system clock
+    strobes, the asynchronous clear signal is asserted for the D-FF that
+    is to be cleared.  All three output Qs are then used to feed a 3-inputx
+    NOR gate, whose output is the Odyssey's active-low <tt>/IRQ2</tt>
+    line.  If any of the three timers have completed terminal count,
+    their latch is set and IRQ2 is asserted.
     </p>
     <p>
     Adding tone generation meant inserting one more piece into that path.
@@ -95,32 +142,21 @@ vim: ts=2 sts=2 sw=2 expandtab
     </p>
     <p>
     That's what makes Mode 3 usable at all. Mode 3 turns a counter into a
-    free-running square wave, exactly what you want feeding a piezo
-    speaker, but its OUT toggles on both halves of the cycle, so at audio
-    frequencies it would otherwise fire the latch (and <tt>IRQ2</tt>)
-    thousands of times a second. With the AND-gate exclusion in place,
-    whichever timer is selected for tone can run Mode 3 freely while the
-    other two keep interrupting normally. The same two select bits also
-    drive a 74HC153 mux that routes the chosen timer's raw OUT &mdash; tapped
-    before the flip-flop, so it's still the live square wave, not a latched
-    edge &mdash; to a 2N2222 transistor through a 1K base resistor, switching a
+    free-running square wave, exactly what you want feeding a piezo speaker,
+    but at audio frequencies it would otherwise fire the latch (and
+    <tt>IRQ2</tt>) thousands of times a second. With the AND-gate exclusion in
+    place, whichever timer is selected for tone can run Mode 3 freely while the
+    other two keep interrupting normally. The same two select bits also drive a
+    74HC153 mux that routes the chosen timer's raw OUT &mdash; tapped before
+    the flip-flop, so it's still the live square wave, not a latched edge
+    &mdash; to a 2N2222 transistor through a 1K base resistor, switching a
     piezo speaker wired with a 330&Omega; series resistor. Selecting and
     excluding happen from the same two bits in the same register write, so
     there's no separate masking step required in software.
     </p>
-    <div class=tip-container>
-    The exclusion only protects the timer currently selected. A timer left
-    running in Mode 3 after tone selection moves elsewhere &mdash; or one that
-    was never selected in the first place &mdash; still storms <tt>IRQ2</tt>.
-    The mode and the selection have to change together.
-    </div>
     <p>
-    Of the chip's remaining modes, Mode 0 (count down once and stop) and
-    Mode 2 (self-reloading rate generator, zero jitter) round out the set I
-    actually use, for one-shot delays/profiling and steady periodic
-    interrupts respectively. The rest need a hardware <tt>GATE</tt> input I
-    never wired up, or don't produce the clean single-edge trigger the
-    latch design above depends on.
+    Here's a short video showing the Odyssey playing the Tetris theme!<br/>
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/1k13uB-9kJM?si=jKSLaGIm07RyyX-0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     </p>
   </div>
 </body>
